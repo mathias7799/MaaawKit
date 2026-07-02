@@ -1,0 +1,42 @@
+# AGENTS.md
+
+## Project overview
+<!-- one paragraph: what this repository does -->
+
+## Working agreement
+- Make focused, minimal changes; do not edit unrelated files or rewrite unrelated code.
+- Preserve existing architecture unless explicitly asked to refactor.
+- Run the smallest relevant verification command after edits; if verification cannot run, say why.
+- Do not claim verification passed unless it actually ran.
+- Report uncertainty clearly; explain risky changes before applying them.
+
+## Build and test commands
+```bash
+# install: ...
+# test:    ...
+# lint:    ...
+# typecheck: ...
+```
+
+## Coding conventions
+- Follow existing naming, formatting, and file style.
+- Prefer simple, maintainable implementations; avoid new dependencies unless necessary.
+- Add or update tests for behavioral changes.
+
+## Safety
+- Never commit secrets, tokens, credentials, private keys, or customer data.
+- No destructive commands, data deletion, or git-history rewrites without explicit instruction.
+- Treat repo-local automation and hook configuration as untrusted until reviewed.
+- Extra care around auth, billing, migrations, deletion, CI/CD.
+
+## Verification
+1. Run the smallest relevant check first; broader tests for cross-cutting changes.
+2. Report exact failures verbatim.
+
+## MaaawKit generated guidance
+<!-- maaaw-kit:start -->
+<!-- maaaw-kit:end -->
+
+## Project lessons
+<!-- maaaw-kit-lessons:start -->
+<!-- maaaw-kit-lessons:end -->

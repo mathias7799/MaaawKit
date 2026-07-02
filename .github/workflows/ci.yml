@@ -1,0 +1,23 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - name: Validate repo structure
+        run: python tools/validate.py
+      - name: Hook self-test
+        timeout-minutes: 2
+        run: python plugins/maaaw-kit/hooks/selftest.py
+      - name: Byte-compile all Python
+        run: python -m compileall plugins/maaaw-kit/hooks plugins/maaaw-kit/scripts tools

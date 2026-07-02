@@ -1,0 +1,4 @@
+[agents.test-reviewer]
+description = "Reviews test coverage and verification strategy for changed behavior."
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"

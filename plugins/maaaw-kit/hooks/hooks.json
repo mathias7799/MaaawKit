@@ -1,0 +1,35 @@
+{
+  "description": "maaaw-kit hooks: destructive-command guard, per-edit format+lint feedback, oracle-enforced verification loop, session context injection",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.py"], "timeout": 15, "statusMessage": "Checking safety policy" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-check.py"], "timeout": 120, "statusMessage": "Running edit checks" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/stop-verify.py"], "timeout": 630, "statusMessage": "Running verification oracle" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session-context.py"], "timeout": 20, "statusMessage": "Loading project context" }
+        ]
+      }
+    ]
+  }
+}

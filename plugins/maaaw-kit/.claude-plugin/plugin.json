@@ -1,0 +1,23 @@
+{
+  "name": "maaaw-kit",
+  "version": "2.6.0",
+  "description": "Production engineering kit for Claude Code and Codex: skills, safety hooks, verification loops, specialist agents, memory, audits, and cross-agent handoff and Codex worker delegation.",
+  "author": {
+    "name": "Maaaw"
+  },
+  "displayName": "MaaawKit",
+  "license": "MIT",
+  "homepage": "https://maaaw.dk",
+  "repository": "https://github.com/maaaw/maaaw-kit",
+  "keywords": [
+    "dotnet",
+    "powershell",
+    "typescript",
+    "python",
+    "audit",
+    "hooks",
+    "memory",
+    "codex",
+    "codex-worker"
+  ]
+}
