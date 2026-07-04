@@ -1,6 +1,6 @@
 ---
 description: Delegate a bounded task to Codex CLI from the current Claude Code session
-argument-hint: "<task>" [--mode review-only|backend-task|implementation-worktree|test-fix|security-pass] [--oracle "<cmd>"] [--run]
+argument-hint: '"<task>" [--mode review-only|backend-task|implementation-worktree|test-fix|security-pass] [--oracle "<cmd>"] [--run]'
 ---
 Read the codex-worker skill and delegate this bounded task to Codex: $ARGUMENTS
 

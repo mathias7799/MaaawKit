@@ -1,6 +1,6 @@
 ---
 description: Export a Codex-native setup — AGENTS.md, task brief, skills, optional config/hooks
-argument-hint: [goal] [--install-skills] [--install-hooks] [--write-config] [--dry-run]
+argument-hint: '[goal] [--install-skills] [--install-hooks] [--write-config] [--dry-run]'
 ---
 Read the codex-handoff skill and execute a Codex export. Arguments: $ARGUMENTS
 

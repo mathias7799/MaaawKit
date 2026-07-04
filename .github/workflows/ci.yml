@@ -3,19 +3,42 @@ on:
   push: { branches: [main] }
   pull_request:
 jobs:
-  test:
+  engine:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.10", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["20", "22"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install (locked)
+        run: npm ci
+      - name: Lint (biome)
+        run: npm run lint
+      - name: Typecheck (tsc strict)
+        run: npm run typecheck
+      - name: Test with coverage gate
+        run: npm run coverage
+      - name: Build (tsup)
+        run: npm run build
+      - name: Validate repo with the built CLI
+        run: node dist/cli/main.js validate
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev
+
+  # Frozen 2.6 Python surface — retired at Phase 3 when the scripts become
+  # deprecation stubs. Kept minimal so the legacy plugin stays verifiably usable.
+  legacy-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "${{ matrix.python }}" }
-      - name: Validate repo structure
-        run: python tools/validate.py
+        with: { python-version: "3.12" }
       - name: Hook self-test
         timeout-minutes: 2
         run: python plugins/maaaw-kit/hooks/selftest.py

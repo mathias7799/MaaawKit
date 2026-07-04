@@ -1,6 +1,6 @@
 ---
 description: Start an oracle-driven verification loop (Claude cannot stop until the oracle passes or budget runs out)
-argument-hint: "<goal>" --oracle "<command>" [--max <n>] [--timeout <seconds>]
+argument-hint: '"<goal>" --oracle "<command>" [--max <n>] [--timeout <seconds>]'
 ---
 Read the verification-loop skill, then start a hook-enforced loop for: $ARGUMENTS
 

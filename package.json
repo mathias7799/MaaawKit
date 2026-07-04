@@ -1,0 +1,75 @@
+{
+  "name": "maaawkit",
+  "version": "3.0.0-alpha.0",
+  "description": "MaaawKit engine: cross-agent orchestration bridge, first-class project memory, canonical rules, and safety hooks — one TypeScript engine exposed as CLI, MCP server, and Claude Code hooks",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "maaaw": "./dist/cli/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "default": "./dist/hooks/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "default": "./dist/mcp/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "shims",
+    "schemas",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "biome check src tests shims",
+    "lint:fix": "biome check --write src tests shims",
+    "schemas": "node --experimental-strip-types src/schemas/export.ts",
+    "validate": "node dist/cli/main.js validate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mathias7799/MaaawKit.git"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "agents",
+    "orchestration",
+    "mcp",
+    "memory",
+    "hooks"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "citty": "^0.1.6",
+    "execa": "^9.5.2",
+    "gray-matter": "^4.0.3",
+    "picocolors": "^1.1.1",
+    "tree-kill": "^1.2.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.15.0",
+    "@vitest/coverage-v8": "^3.1.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

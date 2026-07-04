@@ -1,6 +1,6 @@
 ---
 description: Parallel multi-agent repo audit — security, architecture, scalability, quality specialists fan out concurrently, results synthesized into AUDIT.md
-argument-hint: [path or blank for repo root] [extra lanes, e.g. "accessibility, licensing"]
+argument-hint: '[path or blank for repo root] [extra lanes, e.g. "accessibility, licensing"]'
 ---
 Read the workflow-orchestration skill and its references/audit-swarm-spec.md, then run the audit swarm on: $ARGUMENTS (blank = current repo, standard 4 lanes).
 
