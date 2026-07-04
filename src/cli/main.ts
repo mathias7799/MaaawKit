@@ -35,6 +35,61 @@ const validate = defineCommand({
   },
 });
 
+const doctor = defineCommand({
+  meta: {
+    name: "doctor",
+    description: "Diagnose environment, config, and .agent/ state",
+  },
+  args: {
+    cwd: { type: "string", description: "Repo root", default: "." },
+    json: { type: "boolean", description: "Machine-readable output", default: false },
+  },
+  async run({ args }) {
+    const { runDoctor } = await import("../doctor/index.js");
+    const { resolve } = await import("node:path");
+    const report = await runDoctor(resolve(args.cwd));
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      for (const c of report.checks) {
+        const badge =
+          c.status === "ok"
+            ? pc.green(" ok ")
+            : c.status === "warn"
+              ? pc.yellow("warn")
+              : pc.red("FAIL");
+        console.log(`[${badge}] ${c.name}: ${c.detail}`);
+      }
+      console.log(report.healthy ? pc.green("doctor: healthy") : pc.red("doctor: problems found"));
+    }
+    if (!report.healthy) process.exit(1);
+  },
+});
+
+const init = defineCommand({
+  meta: {
+    name: "init",
+    description: "Initialize the .agent/ state directory and a default kit.json",
+  },
+  args: {
+    cwd: { type: "string", description: "Repo root", default: "." },
+  },
+  async run({ args }) {
+    const { ensureStateDirs, writeJsonFile } = await import("../state/index.js");
+    const { KitConfigSchema } = await import("../schemas/index.js");
+    const { existsSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const paths = ensureStateDirs(resolve(args.cwd));
+    if (existsSync(paths.kitConfig)) {
+      console.log(`${paths.kitConfig} already exists — left untouched`);
+    } else {
+      writeJsonFile(paths.kitConfig, KitConfigSchema.parse({}));
+      console.log(`created ${paths.kitConfig}`);
+    }
+    console.log(pc.green(".agent/ initialized"));
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "maaaw",
@@ -44,6 +99,8 @@ const main = defineCommand({
   },
   subCommands: {
     validate,
+    doctor,
+    init,
   },
 });
 

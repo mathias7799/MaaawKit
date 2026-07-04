@@ -39,7 +39,7 @@
     "coverage": "vitest run --coverage",
     "lint": "biome check src tests shims",
     "lint:fix": "biome check --write src tests shims",
-    "schemas": "node --experimental-strip-types src/schemas/export.ts",
+    "schemas": "npm run build && node scripts/export-schemas.mjs",
     "validate": "node dist/cli/main.js validate"
   },
   "repository": {

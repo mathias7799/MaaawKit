@@ -7,7 +7,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | Phase | Scope | Status | Notes |
 |---|---|---|---|
 | 0 | Foundations & porting specs (toolchain, CI, fake CLIs, porting-spec tests, `maaaw validate`) | ✅ | 98 tests, 90% coverage on src/ |
-| 1 | Foundation layer (zod schemas, config resolver, `.agent/` state, doctor v1) | ⬜ | |
+| 1 | Foundation layer (zod schemas, config resolver, `.agent/` state, doctor v1) | ✅ | 8 committed JSON Schemas + drift gate; `maaaw doctor`/`init` live |
 | 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ⬜ | |
 | 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ⬜ | |
 | 4 | Memory engine (records, lifecycle, digest, recall, promote, migrate) | ⬜ | |
@@ -28,9 +28,9 @@ marked ✅.
 - [x] `npx . validate` passes on the repo (and the stricter YAML parsing found + fixed 5 latent frontmatter bugs in 2.6 command files)
 
 ### Phase 1
-- [ ] Schema round-trips tested
-- [ ] Config precedence tested across all five layers
-- [ ] Doctor clean on fresh repo, actionable on broken one
+- [x] Schema round-trips tested (KitConfig, JobRecord, MemoryRecord, Finding, HandoffDoc, AdapterSpec, LoopFile) + committed JSON Schema exports with a CI drift gate
+- [x] Config precedence tested across all five layers (defaults < user < repo < env < CLI), incl. deep-merge and broken-layer fallback
+- [x] Doctor clean on fresh repo, actionable on broken one (bad kit.json → named layer+path; uninitialized → points at `maaaw init`; legacy memory → points at `maaaw memory migrate`)
 
 ### Phase 2
 - [ ] Porting specs pass on both shim paths (engine present/absent)
