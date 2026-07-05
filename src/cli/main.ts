@@ -291,6 +291,183 @@ const bridge = defineCommand({
   },
 });
 
+const memoryAdd = defineCommand({
+  meta: { name: "add", description: "Capture a memory record" },
+  args: {
+    title: { type: "positional", required: true },
+    body: { type: "string", required: true, description: "The knowledge, evidence-first" },
+    type: {
+      type: "string",
+      default: "lesson",
+      description: "lesson|decision|repo-fact|preference|failure-pattern",
+    },
+    tags: { type: "string", description: "Comma-separated tags" },
+    paths: { type: "string", description: "Comma-separated path globs this applies to" },
+    confidence: { type: "string", default: "medium", description: "low|medium|high" },
+    source: { type: "string", default: "session" },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { createRecord } = await import("../memory/index.js");
+    const record = createRecord(args.cwd, {
+      type: args.type as never,
+      title: args.title,
+      body: args.body,
+      tags: args.tags ? args.tags.split(",").map((t) => t.trim()) : [],
+      paths: args.paths ? args.paths.split(",").map((p) => p.trim()) : [],
+      confidence: args.confidence as never,
+      source: args.source,
+    });
+    console.log(`captured ${record.id}: ${record.title}`);
+  },
+});
+
+const memoryList = defineCommand({
+  meta: { name: "list", description: "List memory records" },
+  args: {
+    all: { type: "boolean", default: false, description: "Include archived" },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { listRecords } = await import("../memory/index.js");
+    for (const r of listRecords(args.cwd, { includeArchived: args.all })) {
+      console.log(
+        `${r.id}  ${r.status.padEnd(8)} ${r.confidence.padEnd(6)} hits=${String(r.hits).padEnd(3)} [${r.type}] ${r.title}`,
+      );
+    }
+  },
+});
+
+const memoryRecall = defineCommand({
+  meta: { name: "recall", description: "Keyword search over memory (records hit counts)" },
+  args: {
+    query: { type: "positional", required: true },
+    limit: { type: "string", default: "5" },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { recall } = await import("../memory/index.js");
+    const results = recall(args.cwd, args.query, Number(args.limit));
+    if (results.length === 0) {
+      console.log("no matching records");
+      return;
+    }
+    for (const { record, score } of results) {
+      console.log(
+        `(${score.toFixed(2)}) ${record.id} [${record.type}] ${record.title}\n    ${record.body.split("\n")[0]}`,
+      );
+    }
+  },
+});
+
+const memoryReview = defineCommand({
+  meta: { name: "review", description: "Triage: decay stale records, list candidates" },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { decay, listRecords, suggestPromotions } = await import("../memory/index.js");
+    const { staled } = decay(args.cwd);
+    if (staled.length > 0) console.log(`decayed to stale: ${staled.join(", ")}`);
+    const stale = listRecords(args.cwd).filter((r) => r.status === "stale");
+    if (stale.length > 0) {
+      console.log("\nstale records — confirm (maaaw memory confirm <id>) or archive:");
+      for (const r of stale) console.log(`  ${r.id}  last ${r.lastConfirmed}  ${r.title}`);
+    }
+    const promotable = suggestPromotions(args.cwd);
+    if (promotable.length > 0) {
+      console.log("\npromotion candidates (maaaw memory promote <id>):");
+      for (const r of promotable) console.log(`  ${r.id}  hits=${r.hits}  ${r.title}`);
+    }
+    if (stale.length === 0 && promotable.length === 0)
+      console.log("memory is healthy — nothing to triage");
+  },
+});
+
+const memoryConfirm = defineCommand({
+  meta: { name: "confirm", description: "Confirm a record is still true" },
+  args: { id: { type: "positional", required: true }, cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { confirmRecord } = await import("../memory/index.js");
+    const r = confirmRecord(args.cwd, args.id);
+    console.log(`confirmed ${r.id} (${r.title})`);
+  },
+});
+
+const memoryArchive = defineCommand({
+  meta: { name: "archive", description: "Archive a record (nothing is deleted)" },
+  args: { id: { type: "positional", required: true }, cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { archiveRecord } = await import("../memory/index.js");
+    const r = archiveRecord(args.cwd, args.id);
+    console.log(`archived ${r.id}`);
+  },
+});
+
+const memoryConsolidate = defineCommand({
+  meta: { name: "consolidate", description: "Merge near-duplicate records" },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { consolidate } = await import("../memory/index.js");
+    const { merged } = consolidate(args.cwd);
+    if (merged.length === 0) console.log("no duplicates found");
+    for (const m of merged) console.log(`kept ${m.kept}, archived ${m.archived.join(", ")}`);
+  },
+});
+
+const memoryPromote = defineCommand({
+  meta: { name: "promote", description: "Promote a record into .agent/rules.md" },
+  args: { id: { type: "positional", required: true }, cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { promoteRecord } = await import("../memory/index.js");
+    const r = promoteRecord(args.cwd, args.id);
+    console.log(
+      `promoted ${r.id} into .agent/rules.md — memory is the nursery, rules are the constitution`,
+    );
+  },
+});
+
+const memoryDigest = defineCommand({
+  meta: { name: "digest", description: "Rebuild the budgeted session digest" },
+  args: {
+    budget: { type: "string", description: "Token budget override" },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { buildDigest } = await import("../memory/index.js");
+    const { execa } = await import("execa");
+    let changedFiles: string[] = [];
+    try {
+      const r = await execa("git", ["diff", "--name-only", "HEAD"], {
+        cwd: args.cwd,
+        timeout: 10_000,
+      });
+      changedFiles = r.stdout.split("\n").filter(Boolean);
+    } catch {}
+    const result = buildDigest(args.cwd, {
+      changedFiles,
+      ...(args.budget ? { tokenBudget: Number(args.budget) } : {}),
+    });
+    console.log(
+      `digest: ${result.included.length} record(s), ~${result.tokens} tokens${result.excluded ? `, ${result.excluded} over budget` : ""}`,
+    );
+    if (result.content) console.log(`\n${result.content}`);
+  },
+});
+
+const memory = defineCommand({
+  meta: { name: "memory", description: "First-class project memory: capture, recall, lifecycle" },
+  subCommands: {
+    add: memoryAdd,
+    list: memoryList,
+    recall: memoryRecall,
+    review: memoryReview,
+    confirm: memoryConfirm,
+    archive: memoryArchive,
+    consolidate: memoryConsolidate,
+    promote: memoryPromote,
+    digest: memoryDigest,
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "maaaw",
@@ -303,6 +480,7 @@ const main = defineCommand({
     doctor,
     init,
     bridge,
+    memory,
   },
 });
 

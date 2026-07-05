@@ -368,12 +368,23 @@ async function runSessionContext(cwd: string): Promise<string> {
   const paths = agentPaths(cwd);
   const handoffExists = existsSync(paths.handoffMd);
 
+  // Rebuild the digest live so path-overlap ranking reflects current work;
+  // fall back to the last written digest.md if the rebuild fails.
   let memoryDigest: string | undefined;
-  if (existsSync(paths.memoryDigest)) {
-    try {
-      memoryDigest = readFileSync(paths.memoryDigest, "utf-8");
-    } catch {
-      // ignore
+  try {
+    if (!existsSync(paths.recordsDir)) throw new Error("no memory records");
+    const { buildDigest } = await import("../memory/retrieval.js");
+    const changedFiles = (await git(["diff", "--name-only", "HEAD"], cwd))
+      .split("\n")
+      .filter(Boolean);
+    memoryDigest = buildDigest(cwd, { changedFiles }).content;
+  } catch {
+    if (existsSync(paths.memoryDigest)) {
+      try {
+        memoryDigest = readFileSync(paths.memoryDigest, "utf-8");
+      } catch {
+        // ignore
+      }
     }
   }
 

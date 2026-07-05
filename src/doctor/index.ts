@@ -115,6 +115,28 @@ export async function runDoctor(
     });
   }
 
+  // --- memory health ---
+  if (existsSync(paths.recordsDir)) {
+    try {
+      const { buildDigest, memoryHealth } = await import("../memory/index.js");
+      const digest = buildDigest(cwd);
+      const health = memoryHealth(cwd, digest.tokens);
+      const status = health.stalePercent > 50 ? "warn" : "ok";
+      checks.push({
+        name: "memory",
+        status,
+        detail:
+          `${health.total} record(s): ${health.active} active, ${health.stale} stale (${health.stalePercent}%), ` +
+          `${health.promoted} promoted, ${health.archived} archived; digest ~${health.digestTokens} tokens` +
+          (health.promotionCandidates > 0
+            ? `; ${health.promotionCandidates} promotion candidate(s) — run \`maaaw memory review\``
+            : ""),
+      });
+    } catch {
+      checks.push({ name: "memory", status: "warn", detail: "memory health check failed" });
+    }
+  }
+
   // --- adapters ---
   try {
     const { detectAdapters } = await import("../bridge/adapters.js");

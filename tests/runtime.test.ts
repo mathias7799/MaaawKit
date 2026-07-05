@@ -146,7 +146,10 @@ describe("runHook: session-context", () => {
     writeFileSync(join(cwd, "dirty.txt"), "y");
     mkdirSync(join(cwd, ".agent", "handoff"), { recursive: true });
     mkdirSync(join(cwd, ".agent", "memory"), { recursive: true });
-    writeFileSync(join(cwd, ".agent", "loop.json"), JSON.stringify({ oracle: "npm test", max_iterations: 5, iteration: 2 }));
+    writeFileSync(
+      join(cwd, ".agent", "loop.json"),
+      JSON.stringify({ oracle: "npm test", max_iterations: 5, iteration: 2 }),
+    );
     writeFileSync(join(cwd, ".agent", "handoff", "HANDOFF.md"), "# handoff");
     writeFileSync(join(cwd, ".agent", "memory", "digest.md"), "- remembered lesson");
 
@@ -171,15 +174,13 @@ describe("runPostEdit with injected runner", () => {
     const file = join(cwd, "x.py");
     writeFileSync(file, "print(1)\n");
     const calls: string[][] = [];
-    const out = await runPostEdit(
-      { tool_input: { file_path: file } },
-      async (cmd) => {
-        calls.push(cmd);
-        // ruff format ok; ruff check fails with findings
-        if (cmd.includes("check")) return { exitCode: 1, output: "E501 line too long", missing: false };
-        return { exitCode: 0, output: "", missing: false };
-      },
-    );
+    const out = await runPostEdit({ tool_input: { file_path: file } }, async (cmd) => {
+      calls.push(cmd);
+      // ruff format ok; ruff check fails with findings
+      if (cmd.includes("check"))
+        return { exitCode: 1, output: "E501 line too long", missing: false };
+      return { exitCode: 0, output: "", missing: false };
+    });
     expect(calls.some((c) => c[0] === "ruff" && c.includes("format"))).toBe(true);
     const parsed = JSON.parse(out);
     expect(parsed.decision).toBe("block");

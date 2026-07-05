@@ -10,7 +10,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 1 | Foundation layer (zod schemas, config resolver, `.agent/` state, doctor v1) | ✅ | 8 committed JSON Schemas + drift gate; `maaaw doctor`/`init` live |
 | 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ✅ | Python hooks deleted; plugin runs the node shims; `doctor --hooks` replaces selftest.py |
 | 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ✅ | Python scripts deleted (clean break, no stubs); /bridge + agent-bridge replace codex-worker; README rewritten for 3.0 |
-| 4 | Memory engine (records, lifecycle, digest, recall, promote, migrate) | ⬜ | |
+| 4 | Memory engine (records, lifecycle, digest, recall, promote) | ✅ | migrate waived (no back-compat); promoted→AGENTS.md flow lands with Phase 5 convert |
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ⬜ | |
 | 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ⬜ | |
 | 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ⬜ | |
@@ -44,10 +44,10 @@ marked ✅.
 - [ ] Real `codex exec` smoke test — PENDING: needs a machine with the Codex CLI installed; `maaaw bridge detect` + the codex adapter spec are ready (verified `bridge detect` probes real CLIs — found claude in the dev container)
 
 ### Phase 4
-- [ ] Full lifecycle tested capture→digest→recall→promote
-- [ ] Digest respects token budget under property tests
+- [x] Full lifecycle tested capture→digest→recall→promote (unit + CLI end-to-end smoke: capture → 3 recalls → review suggests → promote → rules.md block → digest excludes promoted → doctor panel)
+- [x] Digest respects token budget under property tests (60 random records × 4 budgets)
 - [~] Migration round-trips a 2.6 memory dir — WAIVED (owner directive: no backwards compatibility; no migrate command ships)
-- [ ] A promoted record appears in converted AGENTS.md
+- [ ] A promoted record appears in converted AGENTS.md — lands with Phase 5 `maaaw convert` (promotion→rules.md flow proven; conversion is the remaining hop)
 
 ### Phase 5
 - [ ] Convert idempotent (double-run = zero diff)
