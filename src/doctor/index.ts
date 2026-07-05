@@ -115,6 +115,23 @@ export async function runDoctor(
     });
   }
 
+  // --- adapters ---
+  try {
+    const { detectAdapters } = await import("../bridge/adapters.js");
+    const found = (await detectAdapters(cwd)).filter((a) => a.available);
+    checks.push({
+      name: "bridge adapters",
+      status: "ok",
+      detail: found.length
+        ? found
+            .map((a) => `${a.id}${a.verifiedAgainst === "unverified" ? " (unverified spec)" : ""}`)
+            .join(", ")
+        : "none detected — install codex/gemini/etc. or add .agent/bridge/adapters.json overrides",
+    });
+  } catch {
+    checks.push({ name: "bridge adapters", status: "warn", detail: "detection failed" });
+  }
+
   const healthy = checks.every((c) => c.status !== "fail");
   return { checks, healthy };
 }

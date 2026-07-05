@@ -9,6 +9,7 @@ export default defineConfig({
       include: ["src/**"],
       // Coverage gate applies to the engine only; CLI wiring and the MCP
       // transport are exercised by integration tests without instrumentation.
+      exclude: ["src/cli/**", "src/mcp/**"],
       thresholds: {
         lines: 80,
         functions: 80,

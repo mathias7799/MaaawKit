@@ -209,25 +209,5 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
     }
   }
 
-  // Codex hooks template must use current event-keyed shape
-  const codexHooks = relFiles.find(
-    (f) => f.rel === "plugins/maaaw-kit/templates/codex/hooks.json.template",
-  );
-  if (codexHooks) {
-    try {
-      const data = JSON.parse(read(codexHooks.abs)) as { hooks?: unknown };
-      const hooks = data.hooks;
-      if (typeof hooks !== "object" || hooks === null || Array.isArray(hooks)) {
-        errors.push("Codex hooks template must have object hooks keyed by event name");
-      } else {
-        for (const event of ["SessionStart", "PreToolUse", "PostToolUse", "Stop"]) {
-          if (!(event in hooks)) errors.push(`Codex hooks template missing ${event}`);
-        }
-      }
-    } catch (e) {
-      errors.push(`invalid Codex hooks template: ${(e as Error).message}`);
-    }
-  }
-
   return { errors, counts };
 }

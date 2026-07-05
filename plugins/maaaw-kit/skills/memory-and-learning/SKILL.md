@@ -67,4 +67,4 @@ One line each, prefixed RULE / NEVER / PREFER / FACT / STRATEGY / FAILED, dated,
 ## Relationship to the rest of the kit
 
 - CLAUDE.md = constitution (stable law). memory/ = case law (accumulating precedent). HANDOFF.md = working memory (one task, deleted when done). Don't mix the tiers.
-- /to-codex includes recent lessons in AGENTS.md automatically — learned rules follow the work to other agents.
+- Promoted rules flow into converted agent files (AGENTS.md and peers) via `maaaw convert` — learned lessons follow the work to other agents.

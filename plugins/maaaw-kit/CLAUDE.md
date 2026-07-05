@@ -24,9 +24,9 @@ Definition of done: build + test + lint all pass, diff contains only intended ch
 - Things that look wrong but are intentional: <list, saves you from "helpful" refactors>
 
 ## Memory
-- Project memory lives in `.claude/memory/` (lessons/decisions/repo-map) and is injected each session.
-- Capture lessons proactively per the memory-and-learning skill; treat NEVER/RULE entries as binding.
-- Promoted rules land here in CLAUDE.md — this file is law, memory is precedent.
+- Project memory lives in `.agent/memory/records/` (schema-valid markdown records); a budgeted digest is injected each session.
+- Capture lessons proactively per the memory-and-learning skill (`/learn`); treat NEVER/RULE entries as binding.
+- Promoted records land in `.agent/rules.md` — rules are law, memory is precedent.
 
 ## Language notes
 - Read the coding-standards skill reference for whichever language you're writing before writing it.

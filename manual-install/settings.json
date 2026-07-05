@@ -1,5 +1,5 @@
 {
-  "$comment": "Merge into .claude/settings.json (project) or ~/.claude/settings.json (global). If 'python' is not on PATH as Python 3, change to 'python3' (Linux/macOS) or 'py -3' (Windows launcher).",
+  "$comment": "Merge into .claude/settings.json (project) or ~/.claude/settings.json (global). Copy the shims from plugins/maaaw-kit/hooks/*.mjs into .claude/hooks/ first. Requires Node >= 20 on PATH.",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"",
             "timeout": 15
           }
         ]
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-check.py\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.mjs\"",
             "timeout": 120
           }
         ]
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify.py\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify.mjs\"",
             "timeout": 960
           }
         ]
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.py\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.mjs\"",
             "timeout": 20
           }
         ]

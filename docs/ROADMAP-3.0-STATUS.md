@@ -9,7 +9,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 0 | Foundations & porting specs (toolchain, CI, fake CLIs, porting-spec tests, `maaaw validate`) | ✅ | 98 tests, 90% coverage on src/ |
 | 1 | Foundation layer (zod schemas, config resolver, `.agent/` state, doctor v1) | ✅ | 8 committed JSON Schemas + drift gate; `maaaw doctor`/`init` live |
 | 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ✅ | Python hooks deleted; plugin runs the node shims; `doctor --hooks` replaces selftest.py |
-| 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ⬜ | |
+| 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ✅ | Python scripts deleted (clean break, no stubs); /bridge + agent-bridge replace codex-worker; README rewritten for 3.0 |
 | 4 | Memory engine (records, lifecycle, digest, recall, promote, migrate) | ⬜ | |
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ⬜ | |
 | 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ⬜ | |
@@ -38,10 +38,10 @@ marked ✅.
 - [x] Fallback provably generated from the same rule source as the engine (shim drift-gate test regenerates from src/hooks/guard-rules.ts and compares byte-for-byte)
 
 ### Phase 3
-- [ ] End-to-end lifecycle green (fake CLIs) incl. cancel-mid-run and worktree cleanup
-- [ ] Guard test proves a destructive task is refused inside the bridge
-- [ ] Write-mode jobs demonstrably cannot touch the main tree
-- [ ] Real `codex exec` smoke test documented (requires a machine with Codex)
+- [x] End-to-end lifecycle green (fake CLIs) incl. cancel-mid-run (tree-kill verified dead) and worktree cleanup
+- [x] Guard test proves a destructive task is refused inside the bridge (`rm -rf /` task → PolicyRefusal before any worktree/file exists; ask-level needs --allow-risky)
+- [x] Write-mode jobs demonstrably cannot touch the main tree (worktree modified, main tree byte-identical, change returned as patch+stat)
+- [ ] Real `codex exec` smoke test — PENDING: needs a machine with the Codex CLI installed; `maaaw bridge detect` + the codex adapter spec are ready (verified `bridge detect` probes real CLIs — found claude in the dev container)
 
 ### Phase 4
 - [ ] Full lifecycle tested capture→digest→recall→promote

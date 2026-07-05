@@ -90,6 +90,10 @@ export const JobRecordSchema = z.object({
   result: WorkerResultSchema.optional(),
   oracle: z.string().optional(),
   oraclePassed: z.boolean().optional(),
+  /** Vendor thread id for --resume, when the adapter supports it. */
+  threadId: z.string().optional(),
+  /** Path to the patch produced by a write-mode job (git diff of the worktree). */
+  patchPath: z.string().optional(),
 });
 
 export type JobRecord = z.infer<typeof JobRecordSchema>;
@@ -100,14 +104,25 @@ export const AdapterSpecSchema = z.object({
   id: z.string().min(1),
   /** Executable name or absolute path. */
   bin: z.string().min(1),
-  /** Args for read-mode execution; placeholders: {outputFile}. Prompt goes to stdin. */
+  /**
+   * Extra argv prepended before mode args (lets overrides run e.g.
+   * `node /path/to/cli.js …` by setting bin: "node").
+   */
+  baseArgs: z.array(z.string()).default([]),
+  /** How the task prompt reaches the CLI: piped to stdin or via {prompt} arg. */
+  promptVia: z.enum(["stdin", "arg"]).default("stdin"),
+  /** Where the result document comes from: {outputFile} arg or captured stdout. */
+  outputVia: z.enum(["file", "stdout"]).default("stdout"),
+  /** Args for read-mode execution; placeholders: {prompt}, {outputFile}. */
   readArgs: z.array(z.string()),
-  /** Args for write-mode execution (run inside an isolated worktree). */
+  /** Args for write-mode execution (always run inside an isolated worktree). */
   writeArgs: z.array(z.string()),
   /** Args to probe availability, e.g. ["--version"]. */
   detectArgs: z.array(z.string()).default(["--version"]),
-  /** Args template for resuming a vendor thread, when supported. */
+  /** Args template for resuming a vendor thread ({threadId}), when supported. */
   resumeArgs: z.array(z.string()).optional(),
+  /** Regex (first capture group) extracting a resumable thread id from output. */
+  threadIdPattern: z.string().optional(),
   env: z.record(z.string(), z.string()).default({}),
   /** Vendor CLI version this spec was last verified against (doctor surfaces it). */
   verifiedAgainst: z.string().default("unverified"),

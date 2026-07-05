@@ -113,6 +113,12 @@
     },
     "oraclePassed": {
       "type": "boolean"
+    },
+    "threadId": {
+      "type": "string"
+    },
+    "patchPath": {
+      "type": "string"
     }
   },
   "required": [

@@ -10,6 +10,29 @@
       "type": "string",
       "minLength": 1
     },
+    "baseArgs": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "promptVia": {
+      "default": "stdin",
+      "type": "string",
+      "enum": [
+        "stdin",
+        "arg"
+      ]
+    },
+    "outputVia": {
+      "default": "stdout",
+      "type": "string",
+      "enum": [
+        "file",
+        "stdout"
+      ]
+    },
     "readArgs": {
       "type": "array",
       "items": {
@@ -36,6 +59,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "threadIdPattern": {
+      "type": "string"
     },
     "env": {
       "default": {},
