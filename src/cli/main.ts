@@ -595,6 +595,26 @@ const handoff = defineCommand({
   subCommands: { write: handoffWrite, read: handoffRead },
 });
 
+const mcpServe = defineCommand({
+  meta: { name: "serve", description: "Run the MCP server on stdio" },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { serveStdio } = await import("../mcp/index.js");
+    const { resolve } = await import("node:path");
+    await serveStdio(resolve(args.cwd));
+    // Keep the process alive; the transport owns stdin/stdout now.
+    await new Promise(() => {});
+  },
+});
+
+const mcp = defineCommand({
+  meta: {
+    name: "mcp",
+    description: "MCP server: bridge_*, memory_*, rules_sync, handoff_* over the same engine",
+  },
+  subCommands: { serve: mcpServe },
+});
+
 const main = defineCommand({
   meta: {
     name: "maaaw",
@@ -612,6 +632,7 @@ const main = defineCommand({
     install,
     rules,
     handoff,
+    mcp,
   },
 });
 

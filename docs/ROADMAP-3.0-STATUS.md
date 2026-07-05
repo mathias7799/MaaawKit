@@ -13,7 +13,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 4 | Memory engine (records, lifecycle, digest, recall, promote) | ✅ | migrate waived (no back-compat); promoted→AGENTS.md flow lands with Phase 5 convert |
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ✅ | drift panel in doctor; promoted memory reaches AGENTS.md (closes the Phase 4 leftover) |
 | 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ⬜ | |
-| 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ⬜ | |
+| 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ✅ | done before Phase 6 (phases 4–7 reorderable per roadmap); SECURITY.md rewritten; docs/MCP.md registration guide |
 | 8 | Split, distribution, launch (plugin split, npm, migration guide, ADRs) | ⬜ | |
 
 ## Acceptance-criteria ledger
@@ -61,9 +61,9 @@ marked ✅.
 - [ ] kit-setup writes a kit.json consumed by guard + loop
 
 ### Phase 7
-- [ ] Tool-schema conformance tests
-- [ ] Cross-agent demo documented (bridge_run + memory_recall via MCP)
-- [ ] Write-mode denied by default from MCP
+- [x] Tool-schema conformance tests (10 tools, schemas asserted over in-memory transport)
+- [x] Cross-agent demo: memory_learn/recall round-trip, bridge_run end-to-end vs fake CLI, rules_sync + handoff round-trip from a second client — automated in tests/mcp.test.ts and documented in docs/MCP.md
+- [x] Write-mode denied by default from MCP; per-client opt-in via kit.json mcp.writeModeClients (tested: opted-in client allowed, other client still denied); guard refusal identical through MCP
 
 ### Phase 8
 - [ ] Plugin split (maaaw-kit + maaaw-bridge), one marketplace

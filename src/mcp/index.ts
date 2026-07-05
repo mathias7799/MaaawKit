@@ -1,8 +1,13 @@
 /**
- * MCP server transport — implemented in Phase 7. The export exists from
- * Phase 0 so the package exports map is stable across alphas.
+ * MCP transport entry — `maaaw mcp serve` speaks stdio; embedders can import
+ * createMaaawServer and attach any transport.
  */
 
-export function mcpServerAvailable(): boolean {
-  return false;
+export { createMaaawServer, type McpServerOptions } from "./server.js";
+
+export async function serveStdio(cwd: string): Promise<void> {
+  const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+  const { createMaaawServer } = await import("./server.js");
+  const server = createMaaawServer({ cwd });
+  await server.connect(new StdioServerTransport());
 }
