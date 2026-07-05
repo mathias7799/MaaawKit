@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "maaaw-kit",
-      "description": "MaaawKit: 14 engineering skills (.NET/PowerShell/TS/Python), safety+quality+loop hooks, 8 specialist agents incl. swarm auditors, 15 commands, first-class project memory, and an agent bridge delegating bounded tasks to Codex/Gemini/other CLIs",
+      "description": "MaaawKit: 16 engineering skills (.NET/PowerShell/TS/Python), safety+quality+loop hooks, 8 specialist agents incl. swarm auditors, 17 commands, first-class project memory, and an agent bridge delegating bounded tasks to Codex/Gemini/other CLIs",
       "source": "./plugins/maaaw-kit",
       "category": "development"
     }

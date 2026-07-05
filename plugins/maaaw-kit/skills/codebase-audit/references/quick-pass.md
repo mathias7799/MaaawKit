@@ -1,8 +1,3 @@
----
-name: quick-audit
-description: Fast, timeboxed "smoke audit" of a codebase or PR — the honest half-assed version that finds the scariest 20% in minimal time and explicitly declares what it did NOT check. Use when the user wants a quick look, sanity check, gut check, "anything scary in here?", vibe check of a repo, or pre-merge once-over — anything where a full audit is overkill.
----
-
 # Quick Audit (a.k.a. the honest half-assed audit)
 
 The point of a quick audit is not lower standards — it's narrower scope, declared openly. It answers one question: **"what's most likely to hurt us?"** in ~10 minutes of work, and it always ends with a NOT-CHECKED list so nobody mistakes it for a full audit.

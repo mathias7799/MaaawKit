@@ -26,8 +26,8 @@ jobs:
         run: npm run build
       - name: Test with coverage gate
         run: npm run coverage
-      - name: Validate repo with the built CLI
-        run: node dist/cli/main.js validate
+      - name: Validate repo with the built CLI (incl. 80-line skill budget)
+        run: node dist/cli/main.js validate --max-skill-lines 80
       - name: Hook self-test on this OS
         run: node dist/cli/main.js doctor --hooks
       - name: Audit runtime dependencies

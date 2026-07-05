@@ -1,6 +1,6 @@
 ---
 name: session-handoff
-description: Preserve working state across Claude Code sessions by writing a structured HANDOFF.md before context runs out or the session ends. Use when a task will span multiple sessions, when context is getting long, when the user says "handoff", "save state", "continue tomorrow", "we're running out of context", or before /compact on a complex task. Also governs how to RESUME from an existing HANDOFF.md.
+description: Preserve working state across sessions by writing a structured handoff (.agent/handoff/HANDOFF.md + handoff.json) before context runs out or the session ends. Use when a task will span multiple sessions, when context is getting long, when the user says "handoff", "save state", "continue tomorrow", "we're running out of context", or before /compact on a complex task. Also governs how to RESUME from an existing HANDOFF.md.
 ---
 
 # Session Handoff
@@ -14,7 +14,7 @@ Context windows end; work doesn't. A handoff is you briefing your amnesiac succe
 - The moment a loop budget exhausts with failures remaining
 - Before handing off to another agent (the codex-handoff skill builds on this file)
 
-## HANDOFF.md format (write to repo root; overwrite previous)
+## HANDOFF.md format (write via `maaaw handoff write` → .agent/handoff/; overwrite previous)
 
 ```markdown
 # Handoff — <task> — <date> <time>

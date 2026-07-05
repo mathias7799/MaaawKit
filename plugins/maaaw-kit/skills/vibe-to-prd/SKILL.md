@@ -5,6 +5,8 @@ description: Turn a vague idea, vibe, voice-note-style ramble, or "I want an app
 
 # Vibe → PRD
 
+**Declare your read first**: open with a one-line interpretation of the idea; ask at most ONE clarifying question, and only when interpretations genuinely diverge.
+
 The customer here is an AI coding agent (and future-you). A good agentic PRD is not a corporate PRD: no market analysis theater, no OKR poetry. It's the minimum document that lets an agent build the right thing without asking questions — which means it must be ruthlessly concrete about behavior and equally explicit about what's OUT.
 
 ## Step 1 — Extract, don't interrogate

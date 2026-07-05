@@ -5,6 +5,8 @@ description: Structured planning before non-trivial implementation. Use whenever
 
 # Deep Thinking / Planning
 
+**Declare your read first**: open with a one-line interpretation of the request; ask at most ONE clarifying question, and only when interpretations genuinely diverge.
+
 Cheap tokens spent planning save expensive tokens spent rewriting. But planning theater is worse than no plan — every step below must produce a decision, not prose.
 
 ## When to plan vs. just do it

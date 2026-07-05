@@ -9,7 +9,7 @@ and zero-dependency Claude Code hook shims. On top of the engine sits a
 production plugin for Claude Code.
 
 ```text
-14 skills · 4 hooks · 8 specialist agents · 15 slash commands · 1 engine
+16 skills · 4 hooks · 8 specialist agents · 17 slash commands · 1 engine
 ```
 
 ## Why MaaawKit exists
@@ -189,6 +189,8 @@ MaaawKit includes 8 specialist agents:
 /document       Generate docs from real code
 /handoff        Write session handoff
 /bridge         Delegate a bounded task to another agent CLI
+/cross-review   Second model reviews the diff blind; you adjudicate
+/rules-sync     Compile canonical rules into every agent file
 /learn          Capture durable lesson
 /memory         Inspect/curate memory
 ```

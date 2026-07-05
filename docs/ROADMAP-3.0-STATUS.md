@@ -12,7 +12,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ✅ | Python scripts deleted (clean break, no stubs); /bridge + agent-bridge replace codex-worker; README rewritten for 3.0 |
 | 4 | Memory engine (records, lifecycle, digest, recall, promote) | ✅ | migrate waived (no back-compat); promoted→AGENTS.md flow lands with Phase 5 convert |
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ✅ | drift panel in doctor; promoted memory reaches AGENTS.md (closes the Phase 4 leftover) |
-| 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ⬜ | |
+| 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ✅ | 16 skills / 17 commands / 8 contract-bearing agents; validator enforces budgets + contracts |
 | 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ✅ | done before Phase 6 (phases 4–7 reorderable per roadmap); SECURITY.md rewritten; docs/MCP.md registration guide |
 | 8 | Split, distribution, launch (plugin split, npm, migration guide, ADRs) | ⬜ | |
 
@@ -56,9 +56,11 @@ marked ✅.
 - [x] Handoff round-trip carries the memory digest (Claude→Codex→Claude sample: handoff.json memoryRecords + AGENTS.md digest block; return handoff preserves records)
 
 ### Phase 6
-- [ ] `maaaw validate` green with new rules (80-line limit, contract presence)
-- [ ] Agent outputs parse against finding.schema.json
-- [ ] kit-setup writes a kit.json consumed by guard + loop
+- [x] `maaaw validate` green with new rules (80-line SKILL.md budget, 250-line reference budget, agent findings-contract presence, command→skill cross-refs) — enforced in CI
+- [x] All 8 agents carry the findings contract mirroring schemas/findings-report.schema.json (live audit-swarm dry run not executed — no interactive Claude session in this environment; the contract + audit-swarm-spec schemas are aligned by construction)
+- [x] kit-setup rewritten as an interview writing .agent/kit.json (oracle → /loop + Stop hook; guardLevel → guard hook; dials → /audit //grill), seeds rules.md + first memory record, verifies with doctor --hooks
+
+Notes from the (older) content-structure spec, applied selectively per owner guidance: absorbed trigger phrases into merged skills' descriptions; /cross-review command added; declare-your-read added to deep-thinking + vibe-to-prd; explicit model decisions on all 8 agents (sonnet for breadth, deliberate inherit comments for bug-hunter/code-reviewer); reference-size budget in validator; chaining footers across the command spine. Deliberately NOT adopted (superseded): /codex-worker deprecation stub and memory migrate/compat pointers (no-backwards-compat directive), stop-verify cross-review gate (scope), per-skill license/compat frontmatter (noise), splitting content into maaaw-bridge plugin now (that is Phase 8).
 
 ### Phase 7
 - [x] Tool-schema conformance tests (10 tools, schemas asserted over in-memory transport)

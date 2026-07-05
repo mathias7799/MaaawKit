@@ -23,3 +23,6 @@ FINDINGS: [SEV] — evidence (file:line) — why it will hurt — fix direction.
 HOTSPOT REGISTER: top 5 size×churn files with one-line risk each.
 LOAD-BEARING DEBT: the 1–2 structural issues that block everything else if unaddressed.
 NOT COVERED: runtime behavior, team conventions not visible in code.
+
+## Findings contract (machine-parseable tail)
+End your report with a fenced json code block containing a FindingsReport matching schemas/findings-report.schema.json: `{"agent": "<your name>", "scope": "<what you examined>", "findings": [{"severity": "critical|high|medium|low|info", "title", "file"?, "line"?, "evidence", "recommendation"?, "confidence": "low|medium|high", "lane"?}...], "notCovered": ["..."]}`. Findings without evidence are dropped by the orchestrator; an empty findings array with a filled notCovered list is a valid, honest result.

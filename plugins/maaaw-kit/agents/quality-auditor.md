@@ -23,3 +23,6 @@ CRITICAL-PATH COVERAGE: behavior → covered-by / GAP (3 rows).
 FINDINGS: [SEV] — evidence — impact — fix (grouped with counts).
 TEST TRUSTWORTHINESS: one paragraph — would a green run here actually mean anything?
 NOT COVERED: mutation testing, coverage instrumentation, runtime behavior.
+
+## Findings contract (machine-parseable tail)
+End your report with a fenced json code block containing a FindingsReport matching schemas/findings-report.schema.json: `{"agent": "<your name>", "scope": "<what you examined>", "findings": [{"severity": "critical|high|medium|low|info", "title", "file"?, "line"?, "evidence", "recommendation"?, "confidence": "low|medium|high", "lane"?}...], "notCovered": ["..."]}`. Findings without evidence are dropped by the orchestrator; an empty findings array with a filled notCovered list is a valid, honest result.

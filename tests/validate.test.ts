@@ -143,6 +143,35 @@ describe("validate: command→skill cross-references (pm-skills upgrade)", () =>
   });
 });
 
+describe("validate: Phase 6 rules (agent contracts, reference budgets)", () => {
+  it("flags agents without the findings contract", () => {
+    const root = scaffold();
+    write(root, "plugins/maaaw-kit/agents/rogue.md", "---\nname: rogue\n---\nno contract here\n");
+    const { errors } = validateRepo({ root });
+    expect(errors.some((e) => e.includes("missing findings contract"))).toBe(true);
+  });
+
+  it("accepts agents citing the findings schema", () => {
+    const root = scaffold();
+    write(
+      root,
+      "plugins/maaaw-kit/agents/good.md",
+      "---\nname: good\n---\nEnd with a block matching schemas/findings-report.schema.json.\n",
+    );
+    expect(validateRepo({ root }).errors).toEqual([]);
+  });
+
+  it("caps references/ files at 250 non-empty lines when budgets are on", () => {
+    const root = scaffold();
+    write(root, "plugins/maaaw-kit/skills/big/SKILL.md", "---\nname: big\ndescription: d\n---\nx\n");
+    const longRef = Array.from({ length: 300 }, (_, i) => `line ${i}`).join("\n");
+    write(root, "plugins/maaaw-kit/skills/big/references/huge.md", longRef);
+    expect(validateRepo({ root }).errors).toEqual([]); // budgets off by default
+    const { errors } = validateRepo({ root, maxSkillLines: 80 });
+    expect(errors.some((e) => e.includes("reference over budget"))).toBe(true);
+  });
+});
+
 describe("validate: the MaaawKit repo itself", () => {
   it("is clean", () => {
     const { errors } = validateRepo({ root: join(import.meta.dirname, "..") });

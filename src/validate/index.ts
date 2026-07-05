@@ -133,6 +133,18 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
     }
   }
 
+  // references/ files carry procedures, not books: cap at 250 non-empty lines
+  if (options.maxSkillLines) {
+    for (const f of refMd) {
+      const lines = read(f.abs)
+        .split("\n")
+        .filter((l) => l.trim().length > 0).length;
+      if (lines > 250) {
+        errors.push(`reference over budget: ${f.rel} has ${lines} non-empty lines (max 250)`);
+      }
+    }
+  }
+
   // command/agent frontmatter + no ${CLAUDE_PLUGIN_ROOT} in command markdown
   for (const f of [...commandMd, ...agentMd]) {
     const text = read(f.abs);
@@ -148,6 +160,14 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
       errors.push(
         `\${CLAUDE_PLUGIN_ROOT} in command markdown (only expands in hooks/mcp config): ${f.rel}`,
       );
+    }
+  }
+
+  // agents must carry the findings contract (mirrors findings-report.schema.json)
+  for (const f of agentMd) {
+    const text = read(f.abs);
+    if (!text.includes("findings-report.schema.json") && !text.includes("finding.schema.json")) {
+      errors.push(`agent missing findings contract (schemas/findings-report.schema.json): ${f.rel}`);
     }
   }
 
