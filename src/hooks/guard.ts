@@ -33,7 +33,7 @@ export interface GuardOptions {
   /** Extra rules from .agent/kit.json, evaluated after the built-ins. */
   customBashRules?: readonly {
     pattern: string;
-    flags?: string;
+    flags?: string | undefined;
     message: string;
     action: GuardAction;
   }[];

@@ -43,11 +43,18 @@ const doctor = defineCommand({
   args: {
     cwd: { type: "string", description: "Repo root", default: "." },
     json: { type: "boolean", description: "Machine-readable output", default: false },
+    hooks: { type: "boolean", description: "Also run the hook self-test suite", default: false },
   },
   async run({ args }) {
     const { runDoctor } = await import("../doctor/index.js");
     const { resolve } = await import("node:path");
     const report = await runDoctor(resolve(args.cwd));
+    if (args.hooks) {
+      const { runHooksSelftest } = await import("../doctor/hooks-selftest.js");
+      const hookChecks = await runHooksSelftest();
+      report.checks.push(...hookChecks);
+      report.healthy = report.checks.every((c) => c.status !== "fail");
+    }
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));
     } else {

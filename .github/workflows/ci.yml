@@ -22,25 +22,13 @@ jobs:
         run: npm run lint
       - name: Typecheck (tsc strict)
         run: npm run typecheck
-      - name: Test with coverage gate
-        run: npm run coverage
       - name: Build (tsup)
         run: npm run build
+      - name: Test with coverage gate
+        run: npm run coverage
       - name: Validate repo with the built CLI
         run: node dist/cli/main.js validate
+      - name: Hook self-test on this OS
+        run: node dist/cli/main.js doctor --hooks
       - name: Audit runtime dependencies
         run: npm audit --omit=dev
-
-  # Frozen 2.6 Python surface — retired at Phase 3 when the scripts become
-  # deprecation stubs. Kept minimal so the legacy plugin stays verifiably usable.
-  legacy-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Hook self-test
-        timeout-minutes: 2
-        run: python plugins/maaaw-kit/hooks/selftest.py
-      - name: Byte-compile all Python
-        run: python -m compileall plugins/maaaw-kit/hooks plugins/maaaw-kit/scripts tools

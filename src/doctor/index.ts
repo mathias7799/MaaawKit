@@ -115,15 +115,6 @@ export async function runDoctor(
     });
   }
 
-  // --- legacy 2.6 state worth migrating ---
-  if (existsSync(`${cwd}/.claude/memory`)) {
-    checks.push({
-      name: "legacy memory",
-      status: "warn",
-      detail: ".claude/memory/ found — import it with `maaaw memory migrate` (Phase 4)",
-    });
-  }
-
   const healthy = checks.every((c) => c.status !== "fail");
   return { checks, healthy };
 }

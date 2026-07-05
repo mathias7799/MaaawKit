@@ -23,3 +23,10 @@ export {
   type Language,
 } from "./post-edit.js";
 export * from "./session-context.js";
+export { runHook, runPostEdit, type HookKind, type HookRunResult } from "./runtime.js";
+export {
+  FALLBACK_PLACEHOLDER,
+  GENERATED_HEADER,
+  fallbackDataLiteral,
+  generateShim,
+} from "./shim-gen.js";

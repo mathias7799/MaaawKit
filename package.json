@@ -37,9 +37,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "lint": "biome check src tests shims",
-    "lint:fix": "biome check --write src tests shims",
+    "lint": "biome check src tests scripts shims/templates",
+    "lint:fix": "biome check --write src tests scripts shims/templates",
     "schemas": "npm run build && node scripts/export-schemas.mjs",
+    "shims": "npm run build && node scripts/build-shims.mjs",
     "validate": "node dist/cli/main.js validate"
   },
   "repository": {

@@ -13,12 +13,6 @@ export const BRIEF_END = "<!-- maaaw-kit-brief:end -->";
 export const MEMORY_BEGIN = "<!-- maaaw-kit-memory:start -->";
 export const MEMORY_END = "<!-- maaaw-kit-memory:end -->";
 
-// Legacy markers migrated on sight (pre-2.5 power-kit naming).
-export const POWER_GEN_BEGIN = "<!-- power-kit:start -->";
-export const POWER_GEN_END = "<!-- power-kit:end -->";
-export const POWER_LES_BEGIN = "<!-- power-kit-lessons:start -->";
-export const POWER_LES_END = "<!-- power-kit-lessons:end -->";
-
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

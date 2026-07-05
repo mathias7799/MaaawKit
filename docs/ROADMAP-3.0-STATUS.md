@@ -8,7 +8,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 |---|---|---|---|
 | 0 | Foundations & porting specs (toolchain, CI, fake CLIs, porting-spec tests, `maaaw validate`) | ✅ | 98 tests, 90% coverage on src/ |
 | 1 | Foundation layer (zod schemas, config resolver, `.agent/` state, doctor v1) | ✅ | 8 committed JSON Schemas + drift gate; `maaaw doctor`/`init` live |
-| 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ⬜ | |
+| 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ✅ | Python hooks deleted; plugin runs the node shims; `doctor --hooks` replaces selftest.py |
 | 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ⬜ | |
 | 4 | Memory engine (records, lifecycle, digest, recall, promote, migrate) | ⬜ | |
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ⬜ | |
@@ -33,9 +33,9 @@ marked ✅.
 - [x] Doctor clean on fresh repo, actionable on broken one (bad kit.json → named layer+path; uninitialized → points at `maaaw init`; legacy memory → points at `maaaw memory migrate`)
 
 ### Phase 2
-- [ ] Porting specs pass on both shim paths (engine present/absent)
-- [ ] Latency budget measured in CI (<80 ms fallback / <250 ms engine)
-- [ ] Fallback provably generated from the same rule source as the engine
+- [x] Porting specs pass on both shim paths (engine present via node_modules link / absent → embedded fallback)
+- [x] Latency budget measured in CI (<80 ms fallback / <250 ms engine medians, ×3 headroom factor for shared runners via MAAAW_LATENCY_FACTOR)
+- [x] Fallback provably generated from the same rule source as the engine (shim drift-gate test regenerates from src/hooks/guard-rules.ts and compares byte-for-byte)
 
 ### Phase 3
 - [ ] End-to-end lifecycle green (fake CLIs) incl. cancel-mid-run and worktree cleanup
@@ -46,7 +46,7 @@ marked ✅.
 ### Phase 4
 - [ ] Full lifecycle tested capture→digest→recall→promote
 - [ ] Digest respects token budget under property tests
-- [ ] Migration round-trips a 2.6 memory dir
+- [~] Migration round-trips a 2.6 memory dir — WAIVED (owner directive: no backwards compatibility; no migrate command ships)
 - [ ] A promoted record appears in converted AGENTS.md
 
 ### Phase 5
@@ -76,3 +76,13 @@ marked ✅.
   workspace — per roadmap §2).
 - Node ≥ 20, ESM-only, TypeScript strict, tsup build, vitest tests, biome
   lint/format — per roadmap §2.
+- **No backwards compatibility** (owner directive, 2026-07-05): 3.0 is a clean
+  break from 2.6. Concretely: Python hooks/scripts deleted as soon as their TS
+  replacement lands (hooks + validator at Phase 2 instead of Phase 3); the
+  plugin's hooks.json runs the node shims directly; the loop file lives ONLY at
+  `.agent/loop.json` (no `.claude/`/`.codex/` fallback); session context reads
+  ONLY the 3.0 memory digest (no `.claude/memory/*.md` injection); no legacy
+  power-kit marker migration; `maaaw memory migrate` and the 2.6 compat pointer
+  are dropped from Phase 4 scope (acceptance bullet waived); no legacy-python CI
+  job. The `/loop` command and content will be rewritten against `.agent/` in
+  Phase 6.

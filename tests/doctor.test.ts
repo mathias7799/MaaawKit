@@ -71,14 +71,4 @@ describe("doctor", () => {
     expect(bad?.status).toBe("fail");
     expect(bad?.detail).toContain("kit.json");
   });
-
-  it("points at legacy .claude/memory for migration", async () => {
-    const cwd = tmp();
-    gitInit(cwd);
-    mkdirSync(join(cwd, ".claude", "memory"), { recursive: true });
-    const report = await runDoctor(cwd, {});
-    const legacy = check(report, "legacy memory");
-    expect(legacy?.status).toBe("warn");
-    expect(legacy?.detail).toContain("maaaw memory migrate");
-  });
 });
