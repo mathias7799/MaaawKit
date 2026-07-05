@@ -57,7 +57,7 @@ marked ✅.
 
 ### Phase 6
 - [x] `maaaw validate` green with new rules (80-line SKILL.md budget, 250-line reference budget, agent findings-contract presence, command→skill cross-refs) — enforced in CI
-- [x] All 8 agents carry the findings contract mirroring schemas/findings-report.schema.json (live audit-swarm dry run not executed — no interactive Claude session in this environment; the contract + audit-swarm-spec schemas are aligned by construction)
+- [x] All 8 agents carry the findings contract and point at schemas/findings-report.schema.json (live audit-swarm dry run not executed; schema example validation remains a follow-up)
 - [x] kit-setup rewritten as an interview writing .agent/kit.json (oracle → /loop + Stop hook; guardLevel → guard hook; dials → /audit //grill), seeds rules.md + first memory record, verifies with doctor --hooks
 
 Notes from the (older) content-structure spec, applied selectively per owner guidance: absorbed trigger phrases into merged skills' descriptions; /cross-review command added; declare-your-read added to deep-thinking + vibe-to-prd; explicit model decisions on all 8 agents (sonnet for breadth, deliberate inherit comments for bug-hunter/code-reviewer); reference-size budget in validator; chaining footers across the command spine. Deliberately NOT adopted (superseded): /codex-worker deprecation stub and memory migrate/compat pointers (no-backwards-compat directive), stop-verify cross-review gate (scope), per-skill license/compat frontmatter (noise), splitting content into maaaw-bridge plugin now (that is Phase 8).

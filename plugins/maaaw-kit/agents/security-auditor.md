@@ -36,28 +36,5 @@ Report format, max 40 lines:
 
 ## Findings Contract
 
-End your report with a fenced json code block containing a FindingsReport
-matching `schemas/findings-report.schema.json`:
-
-```json
-{
-  "agent": "<your name>",
-  "scope": "<what you examined>",
-  "findings": [
-    {
-      "severity": "critical|high|medium|low|info",
-      "title": "<short title>",
-      "file": "<optional file>",
-      "line": 0,
-      "evidence": "<specific evidence>",
-      "recommendation": "<optional fix direction>",
-      "confidence": "low|medium|high",
-      "lane": "<optional lane>"
-    }
-  ],
-  "notCovered": ["..."]
-}
-```
-
-Findings without evidence are dropped by the orchestrator. An empty findings
-array with a filled `notCovered` list is a valid, honest result.
+End your report with exactly one fenced `json` code block containing a FindingsReport matching `schemas/findings-report.schema.json`.
+Use the shared Findings Contract in `plugins/maaaw-kit/skills/orchestration/references/audit-swarm-spec.md`; findings without evidence are dropped, and an empty `findings` array is valid when `notCovered` is honest.

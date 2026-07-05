@@ -434,16 +434,9 @@ const memoryDigest = defineCommand({
     cwd: { type: "string", default: "." },
   },
   async run({ args }) {
+    const { gitChangedFiles } = await import("../git.js");
     const { buildDigest } = await import("../memory/index.js");
-    const { execa } = await import("execa");
-    let changedFiles: string[] = [];
-    try {
-      const r = await execa("git", ["diff", "--name-only", "HEAD"], {
-        cwd: args.cwd,
-        timeout: 10_000,
-      });
-      changedFiles = r.stdout.split("\n").filter(Boolean);
-    } catch {}
+    const changedFiles = await gitChangedFiles(args.cwd);
     const result = buildDigest(args.cwd, {
       changedFiles,
       ...(args.budget ? { tokenBudget: Number(args.budget) } : {}),
@@ -544,16 +537,9 @@ const handoffWrite = defineCommand({
     cwd: { type: "string", default: "." },
   },
   async run({ args }) {
+    const { gitChangedFiles } = await import("../git.js");
     const { writeHandoff } = await import("../handoff/index.js");
-    const { execa } = await import("execa");
-    let changedFiles: string[] = [];
-    try {
-      const r = await execa("git", ["diff", "--name-only", "HEAD"], {
-        cwd: args.cwd,
-        timeout: 10_000,
-      });
-      changedFiles = r.stdout.split("\n").filter(Boolean);
-    } catch {}
+    const changedFiles = await gitChangedFiles(args.cwd);
     const split = (s?: string) =>
       s
         ? s

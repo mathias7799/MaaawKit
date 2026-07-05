@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getPromptAsset, summarizePromptAssets } from "../prompts/catalog.js";
-import { type IdeMcpSurfaceOptions, jsonResource, text } from "./ide-shared.js";
+import { type IdeMcpSurfaceOptions, errorText, jsonResource, jsonText } from "./ide-shared.js";
 
 export function registerIdePromptTools(server: McpServer, _opts: IdeMcpSurfaceOptions): void {
   server.registerResource(
@@ -9,8 +9,7 @@ export function registerIdePromptTools(server: McpServer, _opts: IdeMcpSurfaceOp
     "maaaw://prompts/catalog",
     {
       title: "MaaawKit prompt asset catalog",
-      description:
-        "Interchangeable command, agent, skill, and reference prompts for orchestration.",
+      description: "Interchangeable command, agent, skill, reference prompts orchestration.",
       mimeType: "application/json",
     },
     async (uri) => jsonResource(uri.href, { assets: summarizePromptAssets() }),
@@ -30,29 +29,24 @@ export function registerIdePromptTools(server: McpServer, _opts: IdeMcpSurfaceOp
     async (args) => {
       let assets = summarizePromptAssets();
       if (args.kind) assets = assets.filter((asset) => asset.kind === args.kind);
-      if (args.language)
+      if (args.language) {
         assets = assets.filter((asset) => asset.languages.includes(args.language ?? ""));
+      }
       if (args.tag) assets = assets.filter((asset) => asset.tags.includes(args.tag ?? ""));
-      return text(JSON.stringify({ assets }, null, 2));
+      return jsonText({ assets });
     },
   );
 
   server.registerTool(
     "prompt_read",
     {
-      description:
-        "Read one prompt asset by id, including the full prompt text and routing metadata.",
+      description: "Read one prompt asset by id, including full prompt text routing metadata.",
       inputSchema: { id: z.string().min(1) },
     },
     async (args) => {
       const asset = getPromptAsset(args.id);
-      if (!asset) {
-        return {
-          content: [{ type: "text" as const, text: `Unknown prompt asset: ${args.id}` }],
-          isError: true,
-        };
-      }
-      return text(JSON.stringify(asset, null, 2));
+      if (!asset) return errorText(`Unknown prompt asset: ${args.id}`);
+      return jsonText(asset);
     },
   );
 
@@ -61,7 +55,7 @@ export function registerIdePromptTools(server: McpServer, _opts: IdeMcpSurfaceOp
     {
       title: "MaaawKit orchestration prompt",
       description:
-        "Compose an orchestrator-facing prompt from a selected MaaawKit agent/skill/command/reference asset.",
+        "Compose an orchestrator-facing prompt from selected MaaawKit agent/skill/command/reference asset.",
       argsSchema: {
         assetId: z.string().min(1),
         task: z.string().min(1),
@@ -102,10 +96,10 @@ export function registerIdePromptTools(server: McpServer, _opts: IdeMcpSurfaceOp
                 asset.content.trim(),
                 "",
                 "## Orchestration Requirements",
-                "- Use the selected asset as the role/workflow/reference contract.",
-                "- If delegating, pass this asset id as promptAssetId on bridge_run or handoff_write.",
-                "- If the asset conflicts with the explicit task, follow the explicit task and record the conflict.",
-                "- Preserve provenance: include asset id/path in handoff, bridge task, or final report.",
+                "- Use selected asset as role/workflow/reference contract.",
+                "- If delegating, pass this asset id promptAssetId on bridge_run or handoff_write.",
+                "- If asset conflicts explicit task, follow explicit task and record conflict.",
+                "- Preserve provenance: include asset id/path in handoff, bridge task, final report.",
               ].join("\n"),
             },
           },

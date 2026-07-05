@@ -348,10 +348,9 @@ async function runSessionContext(cwd: string): Promise<string> {
   let memoryDigest: string | undefined;
   try {
     if (!existsSync(paths.recordsDir)) throw new Error("no memory records");
+    const { gitChangedFiles } = await import("../git.js");
     const { buildDigest } = await import("../memory/retrieval.js");
-    const changedFiles = (await git(["diff", "--name-only", "HEAD"], cwd))
-      .split("\n")
-      .filter(Boolean);
+    const changedFiles = await gitChangedFiles(cwd);
     memoryDigest = buildDigest(cwd, { changedFiles }).content;
   } catch {
     if (existsSync(paths.memoryDigest)) {

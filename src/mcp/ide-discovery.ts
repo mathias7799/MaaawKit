@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { resolveConfig } from "../config/index.js";
 import { INTEGRATIONS } from "../integrations/catalog.js";
 import { VERSION } from "../version.js";
-import { type IdeMcpSurfaceOptions, text } from "./ide-shared.js";
+import { type IdeMcpSurfaceOptions, jsonText } from "./ide-shared.js";
 
 export function registerIdeDiscoveryTools(server: McpServer, opts: IdeMcpSurfaceOptions): void {
   const { cwd, clientName, writeModeAllowed } = opts;
@@ -22,36 +22,30 @@ export function registerIdeDiscoveryTools(server: McpServer, opts: IdeMcpSurface
         available: a.available,
         verifiedAgainst: a.verifiedAgainst,
       }));
-      return text(
-        JSON.stringify(
-          {
-            name: "maaawkit",
-            version: VERSION,
-            cwd,
-            client: {
-              name: clientName(),
-              writeModeAllowed: writeModeAllowed(),
-            },
-            guard: {
-              level: config.guardLevel,
-              customRules: config.guardCustomRules.length,
-            },
-            surfaces: {
-              mcp: true,
-              cli: true,
-              hooks: ["guard", "post-edit", "stop-verify", "session-context"],
-              bridge: true,
-              memory: true,
-              rules: true,
-              handoff: true,
-            },
-            environments: INTEGRATIONS,
-            adapters,
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        name: "maaawkit",
+        version: VERSION,
+        cwd,
+        client: {
+          name: clientName(),
+          writeModeAllowed: writeModeAllowed(),
+        },
+        guard: {
+          level: config.guardLevel,
+          customRules: config.guardCustomRules.length,
+        },
+        surfaces: {
+          mcp: true,
+          cli: true,
+          hooks: ["guard", "post-edit", "stop-verify", "session-context"],
+          bridge: true,
+          memory: true,
+          rules: true,
+          handoff: true,
+        },
+        environments: INTEGRATIONS,
+        adapters,
+      });
     },
   );
 
@@ -83,36 +77,30 @@ export function registerIdeDiscoveryTools(server: McpServer, opts: IdeMcpSurface
       } catch (e) {
         git.error = (e as Error).message;
       }
-      return text(
-        JSON.stringify(
-          {
-            cwd,
-            git,
-            state: {
-              initialized: existsSync(paths.root),
-              root: paths.root,
-              kitConfig: paths.kitConfig,
-              rulesFile: paths.rulesFile,
-              memoryDir: paths.memoryDir,
-              handoffDir: paths.handoffDir,
-              bridgeDir: paths.bridgeDir,
-            },
-            config: {
-              layers: resolved.layers,
-              errors: resolved.errors,
-              guardLevel: resolved.config.guardLevel,
-              oracle: resolved.config.oracle,
-              mcpWriteModeClients: resolved.config.mcp.writeModeClients,
-            },
-            client: {
-              name: clientName(),
-              writeModeAllowed: writeModeAllowed(),
-            },
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        cwd,
+        git,
+        state: {
+          initialized: existsSync(paths.root),
+          root: paths.root,
+          kitConfig: paths.kitConfig,
+          rulesFile: paths.rulesFile,
+          memoryDir: paths.memoryDir,
+          handoffDir: paths.handoffDir,
+          bridgeDir: paths.bridgeDir,
+        },
+        config: {
+          layers: resolved.layers,
+          errors: resolved.errors,
+          guardLevel: resolved.config.guardLevel,
+          oracle: resolved.config.oracle,
+          mcpWriteModeClients: resolved.config.mcp.writeModeClients,
+        },
+        client: {
+          name: clientName(),
+          writeModeAllowed: writeModeAllowed(),
+        },
+      });
     },
   );
 
@@ -124,7 +112,7 @@ export function registerIdeDiscoveryTools(server: McpServer, opts: IdeMcpSurface
     },
     async () => {
       const { runDoctor } = await import("../doctor/index.js");
-      return text(JSON.stringify(await runDoctor(cwd), null, 2));
+      return jsonText(await runDoctor(cwd));
     },
   );
 }

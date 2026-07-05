@@ -1,11 +1,24 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { resolveConfig } from "../config/index.js";
-import { type IdeMcpSurfaceOptions, text } from "./ide-shared.js";
+import { type IdeMcpSurfaceOptions, jsonText } from "./ide-shared.js";
 
 const TOOL_SCHEMA = z
   .enum(["Bash", "PowerShell", "Write", "Edit", "MultiEdit", "NotebookEdit"])
   .default("Bash");
+
+type GuardToolName = z.infer<typeof TOOL_SCHEMA>;
+type GuardToolArgs = {
+  toolName: GuardToolName;
+  command?: string | undefined;
+  path?: string | undefined;
+};
+
+function guardToolInput(args: GuardToolArgs): { command: string } | { file_path: string } {
+  return args.toolName === "Bash" || args.toolName === "PowerShell"
+    ? { command: args.command ?? "" }
+    : { file_path: args.path ?? "" };
+}
 
 export function registerIdeGuardTools(server: McpServer, opts: IdeMcpSurfaceOptions): void {
   const { cwd } = opts;
@@ -24,27 +37,18 @@ export function registerIdeGuardTools(server: McpServer, opts: IdeMcpSurfaceOpti
     async (args) => {
       const { evaluateToolUse } = await import("../hooks/guard.js");
       const { config } = resolveConfig({ cwd });
-      const toolInput =
-        args.toolName === "Bash" || args.toolName === "PowerShell"
-          ? { command: args.command ?? "" }
-          : { file_path: args.path ?? "" };
+      const toolInput = guardToolInput(args);
       const decision = evaluateToolUse(
         { toolName: args.toolName, toolInput },
         { level: config.guardLevel, customBashRules: config.guardCustomRules },
       );
-      return text(
-        JSON.stringify(
-          {
-            decision: decision.decision,
-            reason: decision.reason,
-            guardLevel: config.guardLevel,
-            toolName: args.toolName,
-            toolInput,
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        decision: decision.decision,
+        reason: decision.reason,
+        guardLevel: config.guardLevel,
+        toolName: args.toolName,
+        toolInput,
+      });
     },
   );
 
@@ -62,10 +66,7 @@ export function registerIdeGuardTools(server: McpServer, opts: IdeMcpSurfaceOpti
     async (args) => {
       const { evaluateToolUse } = await import("../hooks/guard.js");
       const { config } = resolveConfig({ cwd });
-      const toolInput =
-        args.toolName === "Bash" || args.toolName === "PowerShell"
-          ? { command: args.command ?? "" }
-          : { file_path: args.path ?? "" };
+      const toolInput = guardToolInput(args);
       const decision = evaluateToolUse(
         { toolName: args.toolName, toolInput },
         { level: config.guardLevel, customBashRules: config.guardCustomRules },
@@ -76,19 +77,13 @@ export function registerIdeGuardTools(server: McpServer, opts: IdeMcpSurfaceOpti
           : decision.decision === "ask"
             ? "Ask the user for explicit approval before proceeding, or choose a safer command/path."
             : "Do not proceed. Change the command/path or use a safer workflow.";
-      return text(
-        JSON.stringify(
-          {
-            ...decision,
-            guardLevel: config.guardLevel,
-            guidance,
-            toolName: args.toolName,
-            toolInput,
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        ...decision,
+        guardLevel: config.guardLevel,
+        guidance,
+        toolName: args.toolName,
+        toolInput,
+      });
     },
   );
 
@@ -102,18 +97,12 @@ export function registerIdeGuardTools(server: McpServer, opts: IdeMcpSurfaceOpti
     async () => {
       const { BASH_RULES, PROTECTED_WRITE_RULES } = await import("../hooks/guard-rules.js");
       const { config } = resolveConfig({ cwd });
-      return text(
-        JSON.stringify(
-          {
-            guardLevel: config.guardLevel,
-            bashRules: BASH_RULES,
-            protectedWriteRules: PROTECTED_WRITE_RULES,
-            customBashRules: config.guardCustomRules,
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        guardLevel: config.guardLevel,
+        bashRules: BASH_RULES,
+        protectedWriteRules: PROTECTED_WRITE_RULES,
+        customBashRules: config.guardCustomRules,
+      });
     },
   );
 }

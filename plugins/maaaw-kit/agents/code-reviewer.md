@@ -22,5 +22,6 @@ Report format (max ~40 lines):
 
 Be specific (file:line always). No praise padding. If the diff is clean, say so in two lines and stop — do not invent findings to seem thorough.
 
-## Findings contract (machine-parseable tail)
-End your report with a fenced json code block containing a FindingsReport matching schemas/findings-report.schema.json: `{"agent": "<your name>", "scope": "<what you examined>", "findings": [{"severity": "critical|high|medium|low|info", "title", "file"?, "line"?, "evidence", "recommendation"?, "confidence": "low|medium|high", "lane"?}...], "notCovered": ["..."]}`. Findings without evidence are dropped by the orchestrator; an empty findings array with a filled notCovered list is a valid, honest result.
+## Findings Contract
+End your report with exactly one fenced `json` code block containing a FindingsReport matching `schemas/findings-report.schema.json`.
+Use the shared Findings Contract in `plugins/maaaw-kit/skills/orchestration/references/audit-swarm-spec.md`; findings without evidence are dropped, and an empty `findings` array is valid when `notCovered` is honest.

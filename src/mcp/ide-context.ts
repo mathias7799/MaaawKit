@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { type IdeMcpSurfaceOptions, text } from "./ide-shared.js";
+import { type IdeMcpSurfaceOptions, jsonText } from "./ide-shared.js";
 
 export function registerIdeContextTools(server: McpServer, opts: IdeMcpSurfaceOptions): void {
   const { cwd } = opts;
@@ -14,7 +14,7 @@ export function registerIdeContextTools(server: McpServer, opts: IdeMcpSurfaceOp
     },
     async () => {
       const { buildCanonicalRules } = await import("../rules/index.js");
-      return text(JSON.stringify(buildCanonicalRules(cwd), null, 2));
+      return jsonText(buildCanonicalRules(cwd));
     },
   );
 
@@ -29,17 +29,11 @@ export function registerIdeContextTools(server: McpServer, opts: IdeMcpSurfaceOp
       const { rulesDrift } = await import("../convert/convert.js");
       const drift = rulesDrift(cwd);
       const stale = drift.filter((d) => d.state !== "in-sync");
-      return text(
-        JSON.stringify(
-          {
-            ok: stale.length === 0,
-            drift,
-            stale,
-          },
-          null,
-          2,
-        ),
-      );
+      return jsonText({
+        ok: stale.length === 0,
+        drift,
+        stale,
+      });
     },
   );
 
@@ -59,7 +53,7 @@ export function registerIdeContextTools(server: McpServer, opts: IdeMcpSurfaceOp
         changedFiles: args.changedFiles,
         ...(args.tokenBudget === undefined ? {} : { tokenBudget: args.tokenBudget }),
       });
-      return text(JSON.stringify(digest, null, 2));
+      return jsonText(digest);
     },
   );
 }

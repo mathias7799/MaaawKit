@@ -12,18 +12,11 @@ import { z } from "zod";
 import { type BridgeMode, isWriteMode } from "../bridge/task.js";
 import { resolveConfig } from "../config/index.js";
 import { VERSION } from "../version.js";
+import { errorText, jsonText, text } from "./ide-shared.js";
 import { registerIdeMcpSurface } from "./ide.js";
 
 export interface McpServerOptions {
   cwd: string;
-}
-
-function text(content: string) {
-  return { content: [{ type: "text" as const, text: content }] };
-}
-
-function errorText(content: string) {
-  return { content: [{ type: "text" as const, text: content }], isError: true };
 }
 
 export function createMaaawServer(opts: McpServerOptions): McpServer {
@@ -84,20 +77,14 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
           promptAssetId: args.promptAssetId,
         });
         if (!args.execute && !args.background) {
-          return text(
-            JSON.stringify(
-              {
-                job: prepared.job,
-                launchCommand: prepared.launchCommand,
-                note: "prepared, not run",
-              },
-              null,
-              2,
-            ),
-          );
+          return jsonText({
+            job: prepared.job,
+            launchCommand: prepared.launchCommand,
+            note: "prepared, not run",
+          });
         }
         const job = await runJob(prepared.job.id, { cwd, background: args.background });
-        return text(JSON.stringify(job, null, 2));
+        return jsonText(job);
       } catch (e) {
         return errorText(`bridge_run refused/failed: ${(e as Error).message}`);
       }
@@ -115,9 +102,9 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
       const { reconcileJob } = await import("../bridge/exec.js");
       if (args.id) {
         const job = await reconcileJob(cwd, args.id);
-        return job ? text(JSON.stringify(job, null, 2)) : errorText(`job not found: ${args.id}`);
+        return job ? jsonText(job) : errorText(`job not found: ${args.id}`);
       }
-      return text(JSON.stringify(listJobs(cwd), null, 2));
+      return jsonText(listJobs(cwd));
     },
   );
 
@@ -136,7 +123,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         job.resultPath && existsSync(job.resultPath)
           ? readFileSync(job.resultPath, "utf-8")
           : "(no result document yet)";
-      return text(JSON.stringify({ job, result }, null, 2));
+      return jsonText({ job, result });
     },
   );
 
@@ -149,7 +136,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
     async (args) => {
       const { cancelJob } = await import("../bridge/exec.js");
       try {
-        return text(JSON.stringify(await cancelJob(cwd, args.id), null, 2));
+        return jsonText(await cancelJob(cwd, args.id));
       } catch (e) {
         return errorText((e as Error).message);
       }
@@ -168,7 +155,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
     async () => {
       const { installRules } = await import("../convert/convert.js");
       const report = installRules({ cwd });
-      return text(JSON.stringify({ actions: report.actions, warnings: report.warnings }, null, 2));
+      return jsonText({ actions: report.actions, warnings: report.warnings });
     },
   );
 
@@ -200,7 +187,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         confidence: args.confidence,
         source: `mcp:${clientName()}`,
       });
-      return text(JSON.stringify(record, null, 2));
+      return jsonText(record);
     },
   );
 
@@ -224,7 +211,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         confidence: record.confidence,
         score: Number(score.toFixed(3)),
       }));
-      return text(JSON.stringify(results, null, 2));
+      return jsonText(results);
     },
   );
 
@@ -237,7 +224,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
     async (args) => {
       const { promoteRecord } = await import("../memory/lifecycle.js");
       try {
-        return text(JSON.stringify(promoteRecord(cwd, args.id), null, 2));
+        return jsonText(promoteRecord(cwd, args.id));
       } catch (e) {
         return errorText((e as Error).message);
       }
@@ -254,7 +241,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
     },
     async () => {
       const { readHandoff } = await import("../handoff/index.js");
-      return text(JSON.stringify(readHandoff(cwd), null, 2));
+      return jsonText(readHandoff(cwd));
     },
   );
 
@@ -285,7 +272,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         toAgent: args.toAgent,
         promptAssetId: args.promptAssetId,
       });
-      return text(JSON.stringify(written.doc, null, 2));
+      return jsonText(written.doc);
     },
   );
 
