@@ -12,6 +12,8 @@ import { execa } from "execa";
 import treeKill from "tree-kill";
 import { resolveConfig } from "../config/index.js";
 import { evaluateCommand } from "../hooks/guard.js";
+import { runTrustedOracle } from "../hooks/oracle.js";
+import { getPromptAsset } from "../prompts/catalog.js";
 import type { AdapterSpec, JobRecord } from "../schemas/index.js";
 import { agentPaths, ensureStateDirs, withLock, writeFileAtomic } from "../state/index.js";
 import { getAdapter, isGitTracked, substituteArgs } from "./adapters.js";
@@ -46,6 +48,7 @@ export interface PrepareOptions {
   allowAsk?: boolean;
   /** Resume a vendor thread from a previous job. */
   resumeFrom?: string | undefined;
+  promptAssetId?: string | undefined;
 }
 
 export interface PreparedJob {
@@ -138,12 +141,24 @@ export async function prepareJob(opts: PrepareOptions): Promise<PreparedJob> {
     resumeThreadId = prior.threadId;
   }
 
+  const promptAsset = opts.promptAssetId ? getPromptAsset(opts.promptAssetId) : null;
+  if (opts.promptAssetId && !promptAsset) {
+    throw new Error(
+      `Unknown prompt asset "${opts.promptAssetId}". Use prompt_catalog to inspect ids.`,
+    );
+  }
+
   const prompt = buildWorkerPrompt({
     task: opts.task,
     mode: opts.mode,
     agent: spec.id,
     oracle: opts.oracle,
     resultName,
+    ...(promptAsset
+      ? {
+          promptAsset: { id: promptAsset.id, path: promptAsset.path, content: promptAsset.content },
+        }
+      : {}),
   });
 
   const template = resumeThreadId
@@ -186,6 +201,7 @@ export async function prepareJob(opts: PrepareOptions): Promise<PreparedJob> {
     logPath,
     resultPath,
     ...(opts.oracle ? { oracle: opts.oracle } : {}),
+    ...(promptAsset ? { promptAssetId: promptAsset.id, promptAssetPath: promptAsset.path } : {}),
   };
   saveJob(cwd, job);
 
@@ -272,18 +288,8 @@ async function finalizeJob(cwd: string, job: JobRecord, exitCode: number): Promi
     !isGitTracked(jobFile, cwd) &&
     evaluateCommand(job.oracle).decision !== "deny";
   if (job.oracle && exitCode === 0 && oracleTrusted) {
-    try {
-      const oracle = await execa(job.oracle, {
-        shell: true,
-        cwd: job.cwd,
-        timeout: 600_000,
-        reject: false,
-        all: true,
-      });
-      patch.oraclePassed = oracle.exitCode === 0;
-    } catch {
-      patch.oraclePassed = false;
-    }
+    const oracle = await runTrustedOracle(job.oracle, job.cwd, 600_000);
+    patch.oraclePassed = oracle.passed;
   }
 
   return updateJob(cwd, job.id, patch);

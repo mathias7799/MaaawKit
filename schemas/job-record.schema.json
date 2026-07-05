@@ -114,6 +114,12 @@
     "oraclePassed": {
       "type": "boolean"
     },
+    "promptAssetId": {
+      "type": "string"
+    },
+    "promptAssetPath": {
+      "type": "string"
+    },
     "threadId": {
       "type": "string"
     },

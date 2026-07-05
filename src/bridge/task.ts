@@ -39,6 +39,7 @@ export interface WorkerPromptOptions {
   agent: string;
   oracle?: string | undefined;
   resultName: string;
+  promptAsset?: { id: string; path: string; content: string } | undefined;
 }
 
 /**
@@ -47,7 +48,7 @@ export interface WorkerPromptOptions {
  * stay parseable, with the agent name generalized.
  */
 export function buildWorkerPrompt(opts: WorkerPromptOptions): string {
-  const { task, mode, agent, oracle, resultName } = opts;
+  const { task, mode, agent, oracle, resultName, promptAsset } = opts;
   const writeAllowed = isWriteMode(mode);
   const lines = [
     "# MaaawKit Worker Task",
@@ -69,6 +70,20 @@ export function buildWorkerPrompt(opts: WorkerPromptOptions): string {
     "- Do not weaken tests, disable rules, or hide failures.",
     "- If information is missing, make the best safe assumption and record it under Assumptions.",
   ];
+  if (promptAsset) {
+    lines.push(
+      "",
+      "## Orchestrator-selected prompt asset",
+      `Asset: ${promptAsset.id}`,
+      `Source: ${promptAsset.path}`,
+      "",
+      "Use this asset as the role/workflow/reference contract for this task. If it conflicts with the explicit task or operating rules above, follow the explicit task and record the conflict under Assumptions.",
+      "",
+      "```markdown",
+      promptAsset.content.trim(),
+      "```",
+    );
+  }
   if (writeAllowed) {
     lines.push(
       "- You may edit files in this isolated worktree.",

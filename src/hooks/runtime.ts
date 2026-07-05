@@ -13,6 +13,7 @@ import { resolveConfig } from "../config/index.js";
 import { agentPaths } from "../state/index.js";
 import { writeJsonFile } from "../state/index.js";
 import { evaluateToolUse, toGuardHookOutput } from "./guard.js";
+import { runTrustedOracle } from "./oracle.js";
 import {
   MAX_FEEDBACK_CHARS,
   POST_EDIT_TIMEOUT_MS,
@@ -246,46 +247,18 @@ async function gitTracked(path: string, cwd: string): Promise<boolean> {
   }
 }
 
-function clock(): string {
-  return new Date().toTimeString().slice(0, 8);
-}
-
 async function runOracle(
   oracle: string,
   cwd: string,
   timeoutSeconds: number,
 ): Promise<OracleResult> {
-  const startedAt = clock();
-  try {
-    const result = await execa(oracle, {
-      shell: true,
-      cwd,
-      timeout: timeoutSeconds * 1000,
-      reject: false,
-      all: true,
-    });
-    if (result.timedOut) {
-      return {
-        passed: false,
-        output: `Oracle timed out after ${timeoutSeconds}s: ${oracle}`,
-        startedAt,
-        endedAt: clock(),
-      };
-    }
-    return {
-      passed: result.exitCode === 0,
-      output: (result.all ?? "").trim(),
-      startedAt,
-      endedAt: clock(),
-    };
-  } catch (e) {
-    return {
-      passed: false,
-      output: `Oracle failed to run: ${(e as Error).message}`,
-      startedAt,
-      endedAt: clock(),
-    };
-  }
+  const result = await runTrustedOracle(oracle, cwd, timeoutSeconds * 1000);
+  return {
+    passed: result.passed,
+    output: result.output,
+    startedAt: result.startedAt,
+    endedAt: result.endedAt,
+  };
 }
 
 async function runStopVerify(cwd: string): Promise<string> {
@@ -415,7 +388,17 @@ export async function runHook(
         return { stdout: await runSessionContext(cwd) };
     }
   } catch {
+    if (kind === "guard") {
+      return { stdout: runGuardFallback(input) };
+    }
     // Hooks must never break the session; fail open (allow).
     return { stdout: "" };
   }
+}
+
+function runGuardFallback(input: HookInput): string {
+  const toolName = input.tool_name ?? "";
+  const toolInput = input.tool_input ?? {};
+  const decision = evaluateToolUse({ toolName, toolInput });
+  return toGuardHookOutput(decision) ?? "";
 }

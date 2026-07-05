@@ -70,6 +70,7 @@ describe("MCP: resources for IDE panels", () => {
     expect(listed.resources.map((r) => r.uri).sort()).toEqual([
       "maaaw://memory/digest",
       "maaaw://project/status",
+      "maaaw://prompts/catalog",
       "maaaw://rules/current",
     ]);
 
@@ -81,6 +82,9 @@ describe("MCP: resources for IDE panels", () => {
 
     const rules = await client.readResource({ uri: "maaaw://rules/current" });
     expect(JSON.parse(resourceText(rules)).rulesText).toContain("Use MCP resources");
+
+    const promptCatalog = await client.readResource({ uri: "maaaw://prompts/catalog" });
+    expect(JSON.parse(resourceText(promptCatalog)).assets.length).toBeGreaterThan(10);
   });
 });
 
@@ -106,6 +110,8 @@ describe("MCP: tool-schema conformance", () => {
       "memory_learn",
       "memory_promote",
       "memory_recall",
+      "prompt_catalog",
+      "prompt_read",
       "rules_read",
       "rules_sync",
       "rules_validate",
@@ -117,8 +123,46 @@ describe("MCP: tool-schema conformance", () => {
     const bridgeRun = tools.find((t) => t.name === "bridge_run");
     const props = bridgeRun?.inputSchema["properties"] as Record<string, unknown>;
     expect(Object.keys(props)).toEqual(
-      expect.arrayContaining(["task", "agent", "mode", "oracle", "execute", "background"]),
+      expect.arrayContaining([
+        "task",
+        "agent",
+        "mode",
+        "oracle",
+        "promptAssetId",
+        "execute",
+        "background",
+      ]),
     );
+  });
+});
+
+describe("MCP: prompt orchestration surface", () => {
+  it("lists reads and composes interchangeable prompt assets", async () => {
+    const { client } = await connect(repo());
+    const listed = await client.callTool({ name: "prompt_catalog", arguments: { kind: "agent" } });
+    const assets = JSON.parse(resultText(listed)).assets;
+    const reviewer = assets.find((asset: { id: string }) =>
+      asset.id.endsWith(".agent.code-reviewer"),
+    );
+    expect(reviewer?.id).toBeTruthy();
+
+    const read = await client.callTool({
+      name: "prompt_read",
+      arguments: { id: reviewer.id },
+    });
+    expect(JSON.parse(resultText(read)).content).toContain("You are a senior reviewer");
+
+    const prompts = await client.listPrompts();
+    expect(prompts.prompts.map((p) => p.name)).toContain("maaaw_orchestrate");
+    const prompt = await client.getPrompt({
+      name: "maaaw_orchestrate",
+      arguments: { assetId: reviewer.id, task: "review auth changes", targetAgent: "codex" },
+    });
+    const content = prompt.messages[0]?.content;
+    expect(content?.type).toBe("text");
+    const promptText = content?.type === "text" ? content.text : "";
+    expect(promptText).toContain(reviewer.id);
+    expect(promptText).toContain("review auth changes");
   });
 });
 
@@ -400,11 +444,17 @@ describe("MCP: rules_sync and handoff round-trip (the bidirectional demo)", () =
 
     await client.callTool({
       name: "handoff_write",
-      arguments: { goal: "continue impl", status: "half done", toAgent: "claude" },
+      arguments: {
+        goal: "continue impl",
+        status: "half done",
+        toAgent: "claude",
+        promptAssetId: "maaaw-kit.agent.code-reviewer",
+      },
     });
     const read = await client.callTool({ name: "handoff_read", arguments: {} });
     const handoff = JSON.parse(resultText(read));
     expect(handoff.doc.fromAgent).toBe("mcp:codex-mcp");
+    expect(handoff.doc.promptAssetId).toBe("maaaw-kit.agent.code-reviewer");
     expect(handoff.doc.memoryRecords.length).toBeGreaterThan(0);
   });
 });

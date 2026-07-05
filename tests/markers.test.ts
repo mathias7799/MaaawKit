@@ -6,9 +6,11 @@ import { describe, expect, it } from "vitest";
 import {
   GEN_BEGIN,
   GEN_END,
+  LES_END,
   extractBetween,
   managedBlock,
   replaceBetween,
+  sanitizeManagedBody,
   upsertBlock,
 } from "../src/convert/markers.js";
 
@@ -85,6 +87,22 @@ describe("markers: upsertBlock", () => {
     const once = upsertBlock("# Doc\n", GEN_BEGIN, GEN_END, block, "## H").text;
     const twice = upsertBlock(once, GEN_BEGIN, GEN_END, block, "## H").text;
     expect(twice).toBe(once);
+  });
+});
+
+describe("markers: sanitization", () => {
+  it("neutralizes managed markers in generated body text", () => {
+    const body = `promoted lesson\n${GEN_END}\nmalicious outro\n${LES_END}`;
+    const block = managedBlock(GEN_BEGIN, GEN_END, body);
+    expect(block).toContain("[managed marker removed: maaaw-kit:end]");
+    expect(block).toContain("[managed marker removed: maaaw-kit-lessons:end]");
+    expect(extractBetween(block, GEN_BEGIN, GEN_END)).not.toContain(GEN_END);
+  });
+
+  it("is exposed for callers that need pre-sanitized snippets", () => {
+    expect(sanitizeManagedBody(`x ${GEN_BEGIN} y`)).toBe(
+      "x [managed marker removed: maaaw-kit:start] y",
+    );
   });
 });
 

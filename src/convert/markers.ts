@@ -13,6 +13,17 @@ export const BRIEF_END = "<!-- maaaw-kit-brief:end -->";
 export const MEMORY_BEGIN = "<!-- maaaw-kit-memory:start -->";
 export const MEMORY_END = "<!-- maaaw-kit-memory:end -->";
 
+const MANAGED_MARKERS = [
+  GEN_BEGIN,
+  GEN_END,
+  LES_BEGIN,
+  LES_END,
+  BRIEF_BEGIN,
+  BRIEF_END,
+  MEMORY_BEGIN,
+  MEMORY_END,
+] as const;
+
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -42,7 +53,15 @@ export function replaceBetween(
 
 /** Wrap body in begin/end markers. */
 export function managedBlock(begin: string, end: string, body: string): string {
-  return `${begin}\n${body.replace(/\s+$/, "")}\n${end}`;
+  return `${begin}\n${sanitizeManagedBody(body).replace(/\s+$/, "")}\n${end}`;
+}
+
+export function sanitizeManagedBody(body: string): string {
+  let sanitized = body;
+  for (const marker of MANAGED_MARKERS) {
+    sanitized = sanitized.replaceAll(marker, `[managed marker removed: ${marker.slice(5, -4)}]`);
+  }
+  return sanitized;
 }
 
 /**

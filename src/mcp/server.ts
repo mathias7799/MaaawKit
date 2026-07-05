@@ -61,6 +61,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
           ])
           .default("review-only"),
         oracle: z.string().optional().describe("Verification command run after the job"),
+        promptAssetId: z.string().optional().describe("Prompt asset id from prompt_catalog"),
         execute: z.boolean().default(false).describe("Run now instead of just preparing"),
         background: z.boolean().default(false).describe("Detach; poll with bridge_status"),
       },
@@ -80,6 +81,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
           mode,
           task: args.task,
           oracle: args.oracle,
+          promptAssetId: args.promptAssetId,
         });
         if (!args.execute && !args.background) {
           return text(
@@ -268,6 +270,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         nextSteps: z.array(z.string()).default([]),
         verification: z.string().optional(),
         toAgent: z.string().optional(),
+        promptAssetId: z.string().optional().describe("Prompt asset id from prompt_catalog"),
       },
     },
     async (args) => {
@@ -280,6 +283,7 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
         verification: args.verification,
         fromAgent: `mcp:${clientName()}`,
         toAgent: args.toAgent,
+        promptAssetId: args.promptAssetId,
       });
       return text(JSON.stringify(written.doc, null, 2));
     },

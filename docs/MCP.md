@@ -31,14 +31,22 @@ and host-native hook adapters as complementary surfaces when the host does not.
 | `guard_evaluate` | Preflight a shell command or write path against the canonical guard policy |
 | `guard_explain` | Return the guard decision plus IDE-friendly next-step guidance |
 | `guard_rules` | List active built-in and repo-configured guard rules |
+| `prompt_catalog` | List interchangeable command, agent, skill, and reference prompt assets |
+| `prompt_read` | Read one prompt asset by id with full text and routing metadata |
 
-## Current resources
+## Current resources and prompts
 
-| Resource | What it provides |
+| Resource / prompt | What it provides |
 |---|---|
 | `maaaw://project/status` | Read-only project/config/client summary for IDE panels |
 | `maaaw://memory/digest` | Budgeted markdown memory digest for context injection |
 | `maaaw://rules/current` | Canonical rules model before host-specific rendering |
+| `maaaw://prompts/catalog` | Prompt asset catalog for orchestration |
+| `maaaw_orchestrate` | Parameterized MCP prompt that composes a selected prompt asset with a task |
+
+`bridge_run` and `handoff_write` accept `promptAssetId` from `prompt_catalog`, so
+an orchestrating model can deliberately choose or switch the role/workflow
+prompt used by a delegated worker or receiving agent.
 
 Security posture (see SECURITY.md): write-mode bridge jobs are **denied by
 default**; allow-list client names in `.agent/kit.json`:

@@ -90,6 +90,8 @@ export const JobRecordSchema = z.object({
   result: WorkerResultSchema.optional(),
   oracle: z.string().optional(),
   oraclePassed: z.boolean().optional(),
+  promptAssetId: z.string().optional(),
+  promptAssetPath: z.string().optional(),
   /** Vendor thread id for --resume, when the adapter supports it. */
   threadId: z.string().optional(),
   /** Path to the patch produced by a write-mode job (git diff of the worktree). */
@@ -164,6 +166,8 @@ export const HandoffDocSchema = z.object({
   verification: z.string().optional(),
   fromAgent: z.string().default("claude"),
   toAgent: z.string().optional(),
+  promptAssetId: z.string().optional(),
+  promptAssetPath: z.string().optional(),
   createdAt: z.iso.datetime(),
   /** Top path-relevant memory record ids carried across agents. */
   memoryRecords: z.array(z.string()).default([]),

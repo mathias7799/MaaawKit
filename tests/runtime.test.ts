@@ -38,6 +38,26 @@ describe("runHook: guard", () => {
     expect(JSON.parse(stdout).hookSpecificOutput.permissionDecision).toBe("deny"); // strict
   });
 
+  it("falls back to built-in guard rules when configured guard evaluation throws", async () => {
+    const cwd = tmp();
+    mkdirSync(join(cwd, ".agent"));
+    writeFileSync(
+      join(cwd, ".agent", "kit.json"),
+      JSON.stringify({
+        guardCustomRules: [{ pattern: "[", message: "bad regex", action: "ask" }],
+      }),
+    );
+    const { stdout } = await runHook(
+      "guard",
+      JSON.stringify({
+        cwd,
+        tool_name: "Bash",
+        tool_input: { command: "rm -rf /" },
+      }),
+    );
+    expect(JSON.parse(stdout).hookSpecificOutput.permissionDecision).toBe("deny");
+  });
+
   it("stays quiet on allow and malformed input", async () => {
     const cwd = tmp();
     expect(

@@ -10,7 +10,7 @@ import { relative } from "node:path";
 import { execa } from "execa";
 import { evaluateCommand } from "../hooks/guard.js";
 import { type AdapterSpec, AdapterSpecSchema } from "../schemas/index.js";
-import { agentPaths, readJsonFile } from "../state/index.js";
+import { agentPaths, readJsonFileDetailed } from "../state/index.js";
 
 /**
  * Trust gate for repo-local executable config — same threat model as the
@@ -104,7 +104,13 @@ export const BUILTIN_ADAPTERS: Record<string, AdapterSpec> = {
 /** True when adapter overrides were present but refused (doctor surfaces it). */
 export function adapterOverridesRefused(cwd: string): boolean {
   const file = agentPaths(cwd).adaptersFile;
-  return readJsonFile(file) !== null && isGitTracked(file, cwd);
+  return readJsonFileDetailed(file).ok && isGitTracked(file, cwd);
+}
+
+export function adapterOverridesError(cwd: string): string | null {
+  const file = agentPaths(cwd).adaptersFile;
+  const result = readJsonFileDetailed(file);
+  return result.ok || result.reason === "missing" ? null : result.message;
 }
 
 /**
@@ -115,7 +121,8 @@ export function adapterOverridesRefused(cwd: string): boolean {
 export function loadAdapters(cwd: string): Record<string, AdapterSpec> {
   const adapters: Record<string, AdapterSpec> = { ...BUILTIN_ADAPTERS };
   const adaptersFile = agentPaths(cwd).adaptersFile;
-  const overrides = readJsonFile<Record<string, unknown>>(adaptersFile);
+  const read = readJsonFileDetailed<Record<string, unknown>>(adaptersFile);
+  const overrides = read.ok ? read.value : null;
   if (overrides && isGitTracked(adaptersFile, cwd)) {
     return adapters; // refused — builtin specs only
   }

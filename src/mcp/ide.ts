@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerIdeContextTools } from "./ide-context.js";
 import { registerIdeDiscoveryTools } from "./ide-discovery.js";
 import { registerIdeGuardTools } from "./ide-guard.js";
+import { registerIdePromptTools } from "./ide-prompts.js";
 import { registerIdeResources } from "./ide-resources.js";
 import type { IdeMcpSurfaceOptions } from "./ide-shared.js";
 
@@ -14,4 +15,5 @@ export function registerIdeMcpSurface(server: McpServer, opts: IdeMcpSurfaceOpti
   registerIdeDiscoveryTools(server, opts);
   registerIdeGuardTools(server, opts);
   registerIdeContextTools(server, opts);
+  registerIdePromptTools(server, opts);
 }

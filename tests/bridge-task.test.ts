@@ -81,6 +81,21 @@ describe("bridge: worker prompt contract", () => {
     expect(p).toContain("`npm test`");
   });
 
+  it("embeds orchestrator-selected prompt asset with provenance", () => {
+    const p = buildWorkerPrompt({
+      ...common,
+      mode: "review-only",
+      promptAsset: {
+        id: "maaaw-kit.agent.code-reviewer",
+        path: "plugins/maaaw-kit/agents/code-reviewer.md",
+        content: "# Reviewer contract\nReport findings only.",
+      },
+    });
+    expect(p).toContain("## Orchestrator-selected prompt asset");
+    expect(p).toContain("Asset: maaaw-kit.agent.code-reviewer");
+    expect(p).toContain("Report findings only.");
+  });
+
   it("pins the required result format and result path", () => {
     const p = buildWorkerPrompt({ ...common, mode: "review-only" });
     for (const section of [

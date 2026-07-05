@@ -85,10 +85,22 @@ export function writeFileAtomic(path: string, content: string): void {
 }
 
 export function readJsonFile<T = unknown>(path: string): T | null {
+  const result = readJsonFileDetailed<T>(path);
+  return result.ok ? result.value : null;
+}
+
+export type JsonReadResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: "missing" | "invalid"; message: string };
+
+export function readJsonFileDetailed<T = unknown>(path: string): JsonReadResult<T> {
+  if (!existsSync(path)) {
+    return { ok: false, reason: "missing", message: "file does not exist" };
+  }
   try {
-    return JSON.parse(readFileSync(path, "utf-8")) as T;
-  } catch {
-    return null;
+    return { ok: true, value: JSON.parse(readFileSync(path, "utf-8")) as T };
+  } catch (e) {
+    return { ok: false, reason: "invalid", message: (e as Error).message };
   }
 }
 

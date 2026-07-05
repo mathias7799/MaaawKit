@@ -157,7 +157,15 @@ export async function runDoctor(
 
   // --- adapters ---
   try {
-    const { detectAdapters } = await import("../bridge/adapters.js");
+    const { adapterOverridesError, detectAdapters } = await import("../bridge/adapters.js");
+    const overridesError = adapterOverridesError(cwd);
+    if (overridesError) {
+      checks.push({
+        name: "bridge adapters config",
+        status: "fail",
+        detail: `.agent/bridge/adapters.json is invalid: ${overridesError}`,
+      });
+    }
     const found = (await detectAdapters(cwd)).filter((a) => a.available);
     checks.push({
       name: "bridge adapters",

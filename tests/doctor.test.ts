@@ -71,4 +71,17 @@ describe("doctor", () => {
     expect(bad?.status).toBe("fail");
     expect(bad?.detail).toContain("kit.json");
   });
+
+  it("fails actionably on invalid bridge adapter overrides", async () => {
+    const cwd = tmp();
+    gitInit(cwd);
+    const paths = ensureStateDirs(cwd);
+    writeJsonFile(paths.kitConfig, {});
+    writeFileSync(paths.adaptersFile, "{broken");
+    const report = await runDoctor(cwd, {});
+    const bad = check(report, "bridge adapters config");
+    expect(report.healthy).toBe(false);
+    expect(bad?.status).toBe("fail");
+    expect(bad?.detail).toContain("adapters.json");
+  });
 });

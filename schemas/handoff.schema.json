@@ -34,6 +34,12 @@
     "toAgent": {
       "type": "string"
     },
+    "promptAssetId": {
+      "type": "string"
+    },
+    "promptAssetPath": {
+      "type": "string"
+    },
     "createdAt": {
       "type": "string",
       "format": "date-time",

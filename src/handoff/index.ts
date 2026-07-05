@@ -6,6 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { buildDigest } from "../memory/retrieval.js";
+import { getPromptAsset } from "../prompts/catalog.js";
 import { type HandoffDoc, HandoffDocSchema } from "../schemas/index.js";
 import {
   agentPaths,
@@ -23,6 +24,7 @@ export interface WriteHandoffInput {
   verification?: string | undefined;
   fromAgent?: string;
   toAgent?: string | undefined;
+  promptAssetId?: string | undefined;
   /** Changed files used to select path-relevant memory. */
   changedFiles?: string[];
 }
@@ -40,6 +42,12 @@ export function writeHandoff(cwd: string, input: WriteHandoffInput): WrittenHand
   const digest = existsSync(paths.recordsDir)
     ? buildDigest(cwd, { changedFiles: input.changedFiles ?? [] })
     : { included: [] as string[], content: "" };
+  const promptAsset = input.promptAssetId ? getPromptAsset(input.promptAssetId) : null;
+  if (input.promptAssetId && !promptAsset) {
+    throw new Error(
+      `Unknown prompt asset "${input.promptAssetId}". Use prompt_catalog to inspect ids.`,
+    );
+  }
 
   const doc = HandoffDocSchema.parse({
     goal: input.goal,
@@ -49,6 +57,12 @@ export function writeHandoff(cwd: string, input: WriteHandoffInput): WrittenHand
     ...(input.verification ? { verification: input.verification } : {}),
     fromAgent: input.fromAgent ?? "claude",
     ...(input.toAgent ? { toAgent: input.toAgent } : {}),
+    ...(promptAsset
+      ? {
+          promptAssetId: promptAsset.id,
+          promptAssetPath: promptAsset.path,
+        }
+      : {}),
     createdAt: new Date().toISOString(),
     memoryRecords: digest.included,
   });
@@ -58,6 +72,7 @@ export function writeHandoff(cwd: string, input: WriteHandoffInput): WrittenHand
     "",
     `- From: ${doc.fromAgent}${doc.toAgent ? ` → ${doc.toAgent}` : ""}`,
     `- Written: ${doc.createdAt}`,
+    ...(doc.promptAssetId ? [`- Prompt asset: ${doc.promptAssetId}`] : []),
     "",
     "## Goal",
     doc.goal,

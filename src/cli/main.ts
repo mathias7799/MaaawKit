@@ -111,6 +111,7 @@ const bridgeRun = defineCommand({
       description: "review-only|security-pass|implementation-worktree|test-fix|backend-task",
     },
     oracle: { type: "string", description: "Verification command run after the job" },
+    "prompt-asset": { type: "string", description: "Prompt asset id from prompt_catalog" },
     run: { type: "boolean", default: false, description: "Execute now (foreground)" },
     background: {
       type: "boolean",
@@ -140,6 +141,7 @@ const bridgeRun = defineCommand({
       mode,
       task: args.task,
       oracle: args.oracle,
+      promptAssetId: args["prompt-asset"],
       branch: args.branch,
       worktreeRoot: args["worktree-root"],
       allowAsk: args["allow-risky"],
