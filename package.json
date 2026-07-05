@@ -1,7 +1,7 @@
 {
   "name": "maaawkit",
   "version": "3.0.0-alpha.0",
-  "description": "MaaawKit engine: cross-agent orchestration bridge, first-class project memory, canonical rules, and safety hooks — one TypeScript engine exposed as CLI, MCP server, and Claude Code hooks",
+  "description": "MaaawKit engine: portable ADE/IDE agent operating layer for cross-agent orchestration, project memory, canonical rules, MCP integration, and safety guardrails",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -54,7 +54,12 @@
     "orchestration",
     "mcp",
     "memory",
-    "hooks"
+    "hooks",
+    "ade",
+    "ide",
+    "cursor",
+    "vscode",
+    "gemini"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
