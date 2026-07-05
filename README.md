@@ -1,13 +1,15 @@
 # MaaawKit
 
-[![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) · MIT · Windows / macOS / Linux · Python stdlib hooks
+[![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) · MIT · Windows / macOS / Linux · Node ≥ 20
 
-**MaaawKit** is a production engineering kit for **Claude Code** and **OpenAI Codex**. It packages reusable skills, safety hooks, verification loops, specialist audit agents, project memory, Codex handoff, and a safe Claude→Codex worker pattern.
-
-It is tuned for teams that want coding agents to behave more like senior engineers: plan first, change narrowly, verify honestly, remember project lessons, and avoid dangerous operations.
+**MaaawKit 3.0** is one TypeScript engine with content attached: a cross-agent
+orchestration **bridge**, first-class project **memory**, canonical **rules**,
+and mechanical **safety hooks** — exposed as a CLI (`maaaw`), an MCP server,
+and zero-dependency Claude Code hook shims. On top of the engine sits a
+production plugin for Claude Code.
 
 ```text
-15 skills · 4 hooks · 8 specialist agents · 16 slash commands
+16 skills · 4 hooks · 8 specialist agents · 17 slash commands · 1 engine
 ```
 
 ## Why MaaawKit exists
@@ -18,18 +20,18 @@ AI coding sessions usually fail for the same reasons:
 - rules live in prose and get ignored under pressure,
 - tests are skipped or weakened,
 - long sessions lose context,
-- handoffs between Claude, Codex, and humans are lossy,
-- safety depends on the model “remembering” not to do dangerous things.
+- handoffs between agents and humans are lossy,
+- safety depends on the model "remembering" not to do dangerous things.
 
 MaaawKit splits responsibility clearly:
 
 ```text
+Engine   = bridge, memory, rules, guard policy — tested TypeScript, one implementation
 Skills   = judgment and reusable workflows
-Hooks    = mechanical guardrails
+Hooks    = mechanical guardrails (shims run with zero installs; engine enhances them)
 Agents   = focused specialist reviewers
 Commands = repeatable entry points
-Memory   = project lessons and durable context
-Codex    = optional second worker, isolated by worktree when it writes
+Memory   = schema-valid records with a real lifecycle, shared across agents
 ```
 
 ## Install
@@ -41,95 +43,70 @@ Inside Claude Code:
 /plugin install maaaw-kit@maaaw-kit-marketplace
 ```
 
-Restart when prompted.
-
-Verify locally:
+The hooks work immediately with zero installs (embedded fallback). For full
+behavior — config-aware guard levels, memory digest injection, the bridge —
+install the engine:
 
 ```bash
-python plugins/maaaw-kit/hooks/selftest.py
-python tools/validate.py
+npm install -g maaawkit   # or: npx maaaw@latest doctor
+maaaw init                # creates .agent/ state + kit.json in your repo
+maaaw doctor --hooks      # verify everything on this machine
 ```
 
 Requirements:
 
-- Python 3.10+ on PATH as `python`
-- optional project tools are used only when present: `ruff`, `eslint`, `prettier`, `dotnet format`, `PSScriptAnalyzer`
-- Codex features require the Codex CLI when you actually run Codex worker tasks
-
-If your machine uses `python3` or `py -3`, change the hook command in `plugins/maaaw-kit/hooks/hooks.json`.
-
-<details>
-<summary>Manual install</summary>
-
-Copy these folders into a repo-level `.claude/` directory or global `~/.claude/` directory:
-
-```text
-plugins/maaaw-kit/skills
-plugins/maaaw-kit/agents
-plugins/maaaw-kit/commands
-plugins/maaaw-kit/hooks
-```
-
-Then merge `manual-install/settings.json` into your Claude Code settings and adjust hook paths.
-</details>
+- Node ≥ 20 (the engine and the hook shims)
+- optional project tools are used only when present: `ruff`, `eslint`,
+  `prettier`, `dotnet format`, `PSScriptAnalyzer`
+- bridge agents (Codex, Gemini, …) require their vendor CLIs only when you
+  actually delegate to them
 
 ## Quickstart
-
-In a repository:
 
 ```text
 /kit-setup
 ```
-
-That command recons the repo, prepares Claude project context, creates memory folders, detects verification commands, and suggests a baseline audit.
 
 Common commands:
 
 ```text
 /plan "Add idempotent webhook retries"
 /review
-/audit
 /audit-swarm
 /loop "green backend tests" --oracle "npm test" --max 10
-/to-codex "Prepare this repo for Codex" --install-skills --write-config
-/codex-worker "Audit backend retry flow" --mode review-only --run
-/codex-worker "Fix failing webhook test" --mode backend-task --oracle "npm test" --run
+/bridge "Audit backend retry flow" --agent codex --mode review-only --run
 ```
 
-## What is included
+## The `.agent/` state standard
 
-### Skills
+Vendor-neutral repo-local state, used identically by the CLI, the MCP server,
+and the hooks:
 
-Skills are reusable workflows that load on demand.
+```text
+.agent/
+├── kit.json            # config: guard level, oracle, dials, memory budget
+├── loop.json           # active verification loop (written by /loop)
+├── bridge/             # jobs/, logs/, results/, adapters.json overrides
+├── memory/             # records/*.md + generated index.json + digest.md
+├── handoff/            # HANDOFF.md + handoff.json
+└── rules.md            # canonical rules source → compiled to all tool formats
+```
 
-| Skill | Purpose |
-|---|---|
-| `coding-standards` | Language-specific production rules for .NET, PowerShell, TypeScript/React/Next.js, and Python |
-| `deep-thinking` | Risk-first planning and option selection before implementation |
-| `debugging` | Reproduce, isolate, instrument, prove, and fix one hypothesis at a time |
-| `orchestration` | Delegate safely across subagents or task partitions |
-| `workflow-orchestration` | Fleet-scale audit/workflow design where Claude Code Workflows are available, with fallback to subagents |
-| `verification-loop` | Oracle-driven “keep fixing until green or budget exhausted” loop |
-| `codebase-audit` | Deep evidence-based codebase audit |
-| `quick-audit` | Honest fast audit with explicit “not checked” list |
-| `grill-me` | Adversarial review and pre-mortem |
-| `vibe-to-prd` | Vague idea to agent-buildable PRD |
-| `codebase-documenter` | README/architecture/project docs from actual code and verified commands |
-| `session-handoff` | Precise handoff protocol for long tasks |
-| `codex-handoff` | Export AGENTS.md, Codex brief, skills, config, and optional hooks |
-| `codex-worker` | Delegate bounded review or implementation tasks from Claude to Codex |
-| `memory-and-learning` | Capture durable lessons, rules, preferences, and mistakes |
+Config resolution: package defaults < `~/.config/maaaw/config.json` <
+`.agent/kit.json` < `MAAAW_*` env < CLI flags.
 
-### Hooks
+## Safety hooks
 
-Hooks are pure-stdlib Python and fail open if the hook itself errors.
+Four zero-dependency Node shims; each upgrades itself to full engine behavior
+when `maaawkit` is installed, and falls back to behavior compiled from the
+same rule table when it is not (fallback can never drift — CI proves it).
 
 | Hook | Event | Purpose |
 |---|---|---|
-| `guard.py` | `PreToolUse` | Blocks or asks before destructive shell/Git/cloud/secret operations |
-| `post-edit-check.py` | `PostToolUse` | Runs relevant format/lint checks after file edits when tools/configs exist |
-| `stop-verify.py` | `Stop` | Enforces `.claude/loop.json` / `.codex/loop.json` verification oracles |
-| `session-context.py` | `SessionStart` | Injects branch, dirty state, recent commits, active loop, handoff, and memory context |
+| `guard.mjs` | `PreToolUse` | Blocks or asks before destructive shell/Git/cloud/secret operations |
+| `post-edit.mjs` | `PostToolUse` | Runs relevant format/lint checks after edits (engine only) |
+| `stop-verify.mjs` | `Stop` | Enforces the `.agent/loop.json` verification oracle |
+| `session-context.mjs` | `SessionStart` | Injects branch, dirty state, loop status, handoff, memory digest |
 
 Examples of guarded operations:
 
@@ -137,17 +114,51 @@ Examples of guarded operations:
 rm -rf /                  denied
 git push --force main     denied
 git reset --hard          ask
-git clean -fdx            ask
 terraform destroy         ask
 kubectl delete            ask
-az group delete           ask
 curl ... | sh             ask
 writing .env/private keys ask
 ```
 
-Hooks are guardrails, not a sandbox. Review `SECURITY.md` before installing hooks globally.
+Guard levels (`.agent/kit.json`): `relaxed` · `standard` · `strict` (asks
+become denies). Custom rules via `guardCustomRules`. Hooks are guardrails,
+not a sandbox — read `SECURITY.md`.
 
-### Agents
+## The bridge — delegate to any agent
+
+The engine dispatches bounded worker jobs to other agent CLIs. Six built-in
+adapters (codex, claude, copilot, cursor, gemini, opencode) plus overrides in
+`.agent/bridge/adapters.json`.
+
+```bash
+maaaw bridge detect                      # which agent CLIs are installed
+maaaw bridge run --agent codex --mode review-only \
+  --task "Review the auth flow" --oracle "npm test"   # prepared by default
+maaaw bridge run ... --run               # execute foreground
+maaaw bridge run ... --background        # detached; poll with status
+maaaw bridge status <id> | result <id> | cancel <id> | cleanup <id>
+```
+
+Safety model, enforced by the engine:
+
+- **prepared-by-default** — broken vendor commands print, they don't run
+- **guard policy inside the bridge** — every task and built command is screened
+  before anything executes; destructive tasks are refused
+- **write modes always run in an isolated git worktree** on an
+  `<agent>/<slug>` branch; changes come back as patch + stat, the main tree is
+  never touched; the oracle verdict is recorded
+- **cancel kills the whole process tree**, Windows included
+- `--resume <job-id>` continues vendor threads where supported
+
+| Mode | Writes? | Use for |
+|---|---:|---|
+| `review-only` | No | reviews, findings, suggested patches |
+| `security-pass` | No | focused security review |
+| `implementation-worktree` | Yes, isolated | generic implementation attempt |
+| `backend-task` | Yes, isolated | bounded backend changes |
+| `test-fix` | Yes, isolated | reproduce/fix failing tests |
+
+## Agents
 
 MaaawKit includes 8 specialist agents:
 
@@ -156,13 +167,13 @@ MaaawKit includes 8 specialist agents:
 | `repo-scout` | Fast repo orientation with observation vs inference separated |
 | `code-reviewer` | Read-only code review with file:line evidence |
 | `bug-hunter` | Diagnosis and root-cause isolation |
-| `test-writer` | Behavior-driven tests in the repo’s framework |
+| `test-writer` | Behavior-driven tests in the repo's framework |
 | `security-auditor` | Secrets, injection, authz, boundaries, vulnerable deps |
 | `architecture-auditor` | Dependency direction, hotspots, consistency, error strategy |
 | `scalability-auditor` | N+1, unbounded work, timeouts, horizontal scaling blockers |
 | `quality-auditor` | Build/test/lint evidence and test trustworthiness |
 
-### Commands
+## Commands
 
 ```text
 /kit-help       Orientation
@@ -177,204 +188,78 @@ MaaawKit includes 8 specialist agents:
 /prd            Turn idea into PRD
 /document       Generate docs from real code
 /handoff        Write session handoff
-/to-codex       Export Codex-native repo setup
-/codex-worker   Delegate a bounded task to Codex CLI
+/bridge         Delegate a bounded task to another agent CLI
+/cross-review   Second model reviews the diff blind; you adjudicate
+/rules-sync     Compile canonical rules into every agent file
 /learn          Capture durable lesson
 /memory         Inspect/curate memory
 ```
 
-## Claude → Codex worker delegation
-
-MaaawKit can let Claude hand a bounded task to Codex **during the same Claude Code session**.
-
-The safe model is:
-
-```text
-Claude Code session
-  ↓
-/codex-worker command
-  ↓
-.codex/tasks/<task>.md
-  ↓
-codex exec
-  ↓
-.codex/results/<result>.md
-  ↓
-Claude reviews result + patch before accepting anything
-```
-
-For answer-only work:
-
-```text
-/codex-worker "Review the backend auth flow for authz bugs" --mode review-only --run
-```
-
-For write-capable work:
-
-```text
-/codex-worker "Fix the webhook retry idempotency bug" --mode backend-task --oracle "npm test" --run
-```
-
-Write-capable modes create a separate Git worktree:
-
-```text
-../<repo>-codex-<task-slug>/
-branch: codex/<task-slug>
-```
-
-Claude then reads:
-
-```text
-.codex/results/<timestamp>-<slug>.md
-.codex/results/<timestamp>-<slug>.patch
-.codex/results/<timestamp>-<slug>.stat.txt
-```
-
-Claude should inspect and verify before applying or merging. Codex should not commit, push, publish, or open pull requests from this flow.
-
-Supported modes:
-
-| Mode | Writes? | Use for |
-|---|---:|---|
-| `review-only` | No | architecture/security/code review, findings, suggested patches |
-| `security-pass` | No | focused security review |
-| `implementation-worktree` | Yes, isolated | generic implementation attempt |
-| `backend-task` | Yes, isolated | bounded backend changes |
-| `test-fix` | Yes, isolated | reproduce/fix failing tests |
-
-Without `--run`, `/codex-worker` only prepares files and prints the exact launch command.
-
-## Codex handoff/export
-
-`/to-codex` prepares a Codex-native setup:
-
-```text
-AGENTS.md
-.codex/brief.md
-.codex/config.toml               optional
-.codex/hooks.json                optional
-.codex/hooks/*                   optional
-.agents/skills/*                 optional
-```
-
-Use:
-
-```text
-/to-codex "Continue this implementation in Codex" --install-skills --write-config
-```
-
-Optional hooks:
-
-```text
-/to-codex "Continue this implementation in Codex" --install-hooks
-```
-
-Codex hooks must be reviewed and trusted in Codex with `/hooks` before relying on them.
-
 ## Verification loop
-
-Start a loop:
 
 ```text
 /loop "green after refactor" --oracle "dotnet build -warnaserror && dotnet test" --max 15
 ```
 
-MaaawKit writes `.claude/loop.json` with a required trust flag. On every attempt to stop, `stop-verify.py` re-runs the oracle:
+MaaawKit writes `.agent/loop.json` with a required trust flag. On every
+attempt to stop, the Stop hook re-runs the oracle:
 
 - green: loop dissolves with evidence,
 - failing: Claude receives the failure output and keeps working,
-- budget exhausted: honest not-done report,
-- cancel: delete `.claude/loop.json`.
+- stalled (same failure 3×): forced re-plan instead of more patching,
+- budget exhausted: honest not-done report.
 
-The hook refuses untrusted or git-tracked loop files.
+The hook refuses untrusted or git-tracked loop files — a loop config from a
+cloned repo is treated as hostile input.
 
-## Memory and learning
+## Memory
 
-MaaawKit keeps three levels of project knowledge:
-
-```text
-CLAUDE.md              durable project law
-.claude/memory/*.md    curated precedent and lessons
-HANDOFF.md             temporary current-task transfer
-```
-
-Memory entries should be small and durable:
-
-```text
-RULE: Queue call transcripts use channel 1 for agent and channel 0 for customer.
-NEVER: Edit generated files under src/generated directly.
-PREFER: Use pnpm, not npm, in this repo.
-FACT: Backend tests require Docker Compose for Postgres.
-```
-
-Do not commit `.claude/memory/` by default unless the team has reviewed it as shareable repository documentation.
-
-## Swarm audits and workflows
-
-`/audit-swarm` runs specialist lanes and synthesizes the evidence:
-
-```text
-repo-scout
-  ├─ security-auditor
-  ├─ architecture-auditor
-  ├─ scalability-auditor
-  └─ quality-auditor
-        ↓
- synthesis + spot verification + not-covered lists
-```
-
-Where Claude Code Workflows are available, MaaawKit can use that style for fleet-scale orchestration. Where they are not available, the same audit degrades to parallel specialist agents or manual phase execution.
+Memory is data with a lifecycle, not prose a skill promises to maintain.
+One markdown record per file under `.agent/memory/records/` (frontmatter +
+body, git-diffable), a generated retrieval index, and a budgeted session
+digest ranked by recency × confidence × hits × path overlap with your recent
+changes. High-confidence, repeatedly-hit lessons get promoted into
+`.agent/rules.md` — memory is the nursery; rules are the constitution. The
+digest travels with handoffs and converted AGENTS.md, so every agent starts
+with the same project lessons.
 
 ## Security model
 
-MaaawKit is intentionally conservative:
-
 - hooks fail open if the hook implementation itself errors,
-- destructive operations are denied or require confirmation,
-- verification loop files require `trusted: true`,
-- repo-local loop files tracked by Git are refused,
-- Codex write tasks run in isolated worktrees,
-- Codex hooks require `/hooks` review/trust,
-- secrets and private keys are treated as protected paths.
+- destructive operations are denied or require confirmation — identically in
+  hooks, CLI, and (later) MCP, because it is one guard engine,
+- verification loop files require `trusted: true` and must be untracked,
+- bridge write jobs run in isolated worktrees; workers must not commit/push,
+- secrets and private keys are protected write paths,
+- runtime dependencies are capped, locked, and audited in CI.
 
 Read `SECURITY.md` before using MaaawKit in sensitive repositories.
 
 ## Development
 
-Run local checks:
-
 ```bash
-python tools/validate.py
-python plugins/maaaw-kit/hooks/selftest.py
+npm ci
+npm run lint && npm run typecheck && npm test
+npm run build && node dist/cli/main.js validate
+maaaw doctor --hooks
 ```
 
-Package layout:
+Repository layout:
 
 ```text
-plugins/maaaw-kit/
-  agents/
-  commands/
-  hooks/
-  scripts/
-  skills/
-  templates/
-docs/CODEX.md
-tools/validate.py
+src/          # engine: bridge/ hooks/ memory/ convert/ schemas/ config/ state/ cli/ mcp/
+shims/        # zero-dep hook shims (generated from templates + rule table)
+plugins/maaaw-kit/   # content: skills, agents, commands, hooks.json
+schemas/      # exported JSON Schemas (generated, committed)
+tests/        # porting specs + integration tests (fake agent CLIs)
+docs/         # roadmap status, architecture notes
 ```
 
-Release hygiene checked by `tools/validate.py`:
-
-- JSON validity
-- balanced Markdown fences
-- skill/agent/command frontmatter
-- skill name matches directory
-- README/marketplace count drift
-- placeholder repository metadata
-- Codex hook template shape
+`maaaw validate` checks: JSON validity, balanced fences, frontmatter, skill
+name/directory match, command→skill cross-references, README/marketplace
+count drift, placeholder metadata.
 
 ## Philosophy
-
-MaaawKit does not try to make agents magical. It gives them a tighter operating system:
 
 ```text
 Understand the repo.

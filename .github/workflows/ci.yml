@@ -3,21 +3,32 @@ on:
   push: { branches: [main] }
   pull_request:
 jobs:
-  test:
+  engine:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.10", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["20", "22"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "${{ matrix.python }}" }
-      - name: Validate repo structure
-        run: python tools/validate.py
-      - name: Hook self-test
-        timeout-minutes: 2
-        run: python plugins/maaaw-kit/hooks/selftest.py
-      - name: Byte-compile all Python
-        run: python -m compileall plugins/maaaw-kit/hooks plugins/maaaw-kit/scripts tools
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install (locked)
+        run: npm ci
+      - name: Lint (biome)
+        run: npm run lint
+      - name: Typecheck (tsc strict)
+        run: npm run typecheck
+      - name: Build (tsup)
+        run: npm run build
+      - name: Test with coverage gate
+        run: npm run coverage
+      - name: Validate repo with the built CLI (incl. 80-line skill budget)
+        run: node dist/cli/main.js validate --max-skill-lines 80
+      - name: Hook self-test on this OS
+        run: node dist/cli/main.js doctor --hooks
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev

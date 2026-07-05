@@ -22,3 +22,6 @@ FINDINGS: [SEV] pattern — file:line — mechanism of failure under load — fi
 FIRST BOTTLENECK: single most likely failure point at 10x load, with reasoning.
 CHEAP WINS: up to 3 low-effort/high-impact fixes.
 NOT COVERED: actual measurements, infra/config, DB indexes not visible in code.
+
+## Findings contract (machine-parseable tail)
+End your report with a fenced json code block containing a FindingsReport matching schemas/findings-report.schema.json: `{"agent": "<your name>", "scope": "<what you examined>", "findings": [{"severity": "critical|high|medium|low|info", "title", "file"?, "line"?, "evidence", "recommendation"?, "confidence": "low|medium|high", "lane"?}...], "notCovered": ["..."]}`. Findings without evidence are dropped by the orchestrator; an empty findings array with a filled notCovered list is a valid, honest result.

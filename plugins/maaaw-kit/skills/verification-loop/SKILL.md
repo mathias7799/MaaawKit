@@ -43,4 +43,4 @@ Only then report done — and report it with evidence: paste the oracle's passin
 
 ## Hook-driven autonomous loops
 
-This kit's Stop hook (`hooks/stop-verify.py`) can enforce the loop mechanically: create `.claude/loop.json` (via the `/loop` command) with `{"trusted": true, "oracle": "<command>", "max_iterations": N}` and the hook will block session exit while the oracle fails, feeding the failure output back. Same rules apply: the hook enforces the oracle; YOU enforce no-cheating.
+This kit's Stop hook (`hooks/stop-verify.mjs`) can enforce the loop mechanically: create `.agent/loop.json` (via the `/loop` command) with `{"trusted": true, "oracle": "<command>", "max_iterations": N}` and the hook will block session exit while the oracle fails, feeding the failure output back. Same rules apply: the hook enforces the oracle; YOU enforce no-cheating.

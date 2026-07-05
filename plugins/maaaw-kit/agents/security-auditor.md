@@ -21,3 +21,6 @@ SECURITY VERDICT: 🔴/🟠/🟢 + one sentence.
 FINDINGS: [SEV] title — file:line — evidence — impact — fix (one line each, grouped by pattern with counts; max 12).
 CLEAN: checks that came back clean (list them — absence of findings must be distinguishable from absence of checking).
 NOT COVERED: what this sweep doesn't establish (business-logic authz depth, runtime config, infra).
+
+## Findings contract (machine-parseable tail)
+End your report with a fenced json code block containing a FindingsReport matching schemas/findings-report.schema.json: `{"agent": "<your name>", "scope": "<what you examined>", "findings": [{"severity": "critical|high|medium|low|info", "title", "file"?, "line"?, "evidence", "recommendation"?, "confidence": "low|medium|high", "lane"?}...], "notCovered": ["..."]}`. Findings without evidence are dropped by the orchestrator; an empty findings array with a filled notCovered list is a valid, honest result.

@@ -1,11 +1,16 @@
 ---
 name: codebase-audit
-description: Full structured audit of a codebase — security, correctness, architecture, dependencies, tests, and operational readiness — producing a prioritized findings report. Use when the user asks for an audit, health check, code quality review, security review, tech-debt assessment, "how bad is this repo", due diligence, or before taking over / open-sourcing / shipping a codebase. For a fast timeboxed pass use quick-audit instead.
+description: Structured audit of a codebase at a configurable depth (quick smoke pass, standard, or deep) — security, correctness, architecture, dependencies, tests, operational readiness — producing a prioritized findings report. Use when the user asks for an audit, health check, quality/security review, tech-debt assessment, "how bad is this repo", "anything scary in here?", sanity check, due diligence, or a pre-merge once-over.
 ---
 
 # Codebase Audit
 
-For parallel execution of this audit across specialist agents, use /audit-swarm (workflow-orchestration skill) — this document defines the phases, severity rules, and report format either way.
+For parallel execution across specialist agents, use /audit-swarm (orchestration skill) — this document defines the phases, severity rules, and report format either way.
+
+## Depth dial (kit.json `dials.auditDepth`, or the user's words)
+- **quick** — the timeboxed smoke pass: run `references/quick-pass.md` exactly (15-minute checklist, one-screen report, mandatory NOT-CHECKED list). /quick-audit forces this depth.
+- **standard** (default) — all phases below, sampled hotspots rather than exhaustive sweeps.
+- **deep** — all phases exhaustively + git-history archaeology; pair with `dials.paranoia: high` to escalate every ask-level guard rule and double-verify findings.
 
 An audit is evidence-based: every finding cites file:line or a command output. No finding without evidence, no severity without impact reasoning. If the repo is large, parallelize phases across subagents (orchestration skill) and synthesize.
 

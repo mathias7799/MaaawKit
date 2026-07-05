@@ -1,7 +1,7 @@
 {
   "name": "maaaw-kit",
-  "version": "2.6.0",
-  "description": "Production engineering kit for Claude Code and Codex: skills, safety hooks, verification loops, specialist agents, memory, audits, and cross-agent handoff and Codex worker delegation.",
+  "version": "3.0.0-alpha.0",
+  "description": "Production engineering kit for Claude Code: skills, safety hooks, verification loops, specialist agents, first-class project memory, audits, and a cross-agent bridge for delegating bounded tasks to Codex, Gemini, and other agent CLIs.",
   "author": {
     "name": "Maaaw"
   },
@@ -17,7 +17,7 @@
     "audit",
     "hooks",
     "memory",
-    "codex",
-    "codex-worker"
+    "bridge",
+    "orchestration"
   ]
 }

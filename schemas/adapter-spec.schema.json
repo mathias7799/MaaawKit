@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bin": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseArgs": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "promptVia": {
+      "default": "stdin",
+      "type": "string",
+      "enum": [
+        "stdin",
+        "arg"
+      ]
+    },
+    "outputVia": {
+      "default": "stdout",
+      "type": "string",
+      "enum": [
+        "file",
+        "stdout"
+      ]
+    },
+    "readArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "writeArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "detectArgs": {
+      "default": [
+        "--version"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumeArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "threadIdPattern": {
+      "type": "string"
+    },
+    "env": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "verifiedAgainst": {
+      "default": "unverified",
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "bin",
+    "readArgs",
+    "writeArgs"
+  ]
+}

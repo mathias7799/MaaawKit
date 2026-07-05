@@ -1,6 +1,6 @@
 ---
 name: orchestration
-description: How to decompose work and delegate to subagents (Task tool) effectively in Claude Code. Use for large multi-part tasks, parallel research, codebase-wide analysis, running independent workstreams, or when the user mentions agents, subagents, parallelization, "do these in parallel", or a task clearly bigger than one context window.
+description: How to decompose work and delegate to subagents (Task tool) and fleets (Workflows) effectively in Claude Code. Use for large multi-part tasks, parallel research, codebase-wide analysis, swarm audits, running independent workstreams, or when the user mentions agents, subagents, parallelization, "do these in parallel", "workflow", "swarm", "in parallel with many agents", or a task clearly bigger than one context window.
 ---
 
 # Orchestration & Subagents
@@ -48,9 +48,17 @@ Rule of thumb: if your subagent prompt is under 5 lines, it will fail or return 
 
 The orchestrator's session should run the strongest model available (Opus-class) — it owns partitioning, synthesis, and severity judgment. Worker agents doing breadth (search, mapping, lane audits) should be Sonnet (`model: sonnet` in agent frontmatter — this kit's auditors and scout are). Escalate individual agents to Opus only for judgment-heavy subtasks.
 
-## Beyond ~5 agents: Workflows
+## Beyond ~5 agents: fleets and Workflows
 
-For fleets (parallel audits, per-module mapping, mass migrations), use Claude Code Workflows where your installed version supports them; otherwise use parallel Task/subagent calls with the same phase design. See the workflow-orchestration skill; `/audit-swarm` is the worked example.
+For fleets (parallel audits, per-module mapping, mass migrations), use Claude Code Workflows where your installed version supports them; otherwise run the identical phase design through parallel Task calls (~5 concurrent, schemas enforced by prompt). Fleet discipline, on top of everything above:
+
+- **Phases, not soup**: recon → parallel specialists → synthesis (→ parallel fixes → verification). Never pipeline unverified work.
+- **Schema every agent** — free-text reports from N agents do not compose. Use `references/audit-swarm-spec.md` schemas (they mirror `schemas/finding.schema.json`); keep schemas flat, deep nesting causes validation-retry loops.
+- **Read-only by default; worktrees for writers** — two agents writing one tree is how swarms corrupt repos.
+- **Right-size**: 4–8 specialists beat 40 generalists for audits; 20+ only for embarrassingly parallel work.
+- Workflow scripts must be deterministic — variability goes in prompts, not control flow.
+
+`/audit-swarm` is the worked example: read `references/audit-swarm-spec.md` before building similar swarms.
 
 ## Custom agents (.claude/agents/)
 

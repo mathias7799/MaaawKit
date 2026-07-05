@@ -1,5 +1,0 @@
-# Conceptual Codex subagent config (verify current [agents] schema in Codex docs).
-[agents.security-reviewer]
-description = "Reviews security-sensitive code changes: secrets, injection, authz, input boundaries."
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"

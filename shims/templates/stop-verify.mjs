@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+// MaaawKit Stop shim — zero dependencies, graceful enhancement.
+// With the engine: full oracle loop (config oracle default, stall detection).
+// Without it: minimal embedded stop-verify with the same trust gate.
+// SECURITY: the loop file is refused unless trusted:true AND untracked in git.
+
+import { execSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf-8");
+}
+
+const raw = await readStdin();
+
+try {
+  const { runHook } = await import("maaawkit/hooks");
+  const { stdout } = await runHook("stop-verify", raw);
+  if (stdout) process.stdout.write(stdout);
+  process.exit(0);
+} catch {
+  // Engine not installed — minimal fallback below.
+}
+
+let data = {};
+try {
+  data = JSON.parse(raw) || {};
+} catch {
+  process.exit(0);
+}
+const cwd = data.cwd || process.cwd();
+
+const statePath = join(cwd, ".agent", "loop.json");
+if (!existsSync(statePath)) process.exit(0);
+
+let state;
+try {
+  state = JSON.parse(readFileSync(statePath, "utf-8"));
+  if (typeof state.oracle !== "string" || !state.oracle) throw new Error("no oracle");
+  state.max_iterations = Number(state.max_iterations);
+  if (!Number.isFinite(state.max_iterations)) throw new Error("bad max_iterations");
+} catch {
+  try {
+    rmSync(statePath, { force: true });
+  } catch {}
+  process.stderr.write("loop file invalid; loop cancelled.\n");
+  process.exit(0);
+}
+
+// Trust gate: trusted:true AND not tracked in git.
+let tracked = false;
+try {
+  const rel = statePath.startsWith(cwd) ? statePath.slice(cwd.length + 1) : statePath;
+  const r = spawnSync("git", ["ls-files", "--error-unmatch", "--", rel], { cwd, timeout: 10000 });
+  tracked = r.status === 0;
+} catch {}
+if (state.trusted !== true || tracked) {
+  const reason =
+    state.trusted !== true
+      ? 'missing "trusted": true'
+      : "the loop file is tracked in git (possible untrusted repo content)";
+  process.stdout.write(
+    JSON.stringify({
+      systemMessage: `⚠️ maaaw-kit refused to execute the verification-loop oracle: ${reason}. The oracle was NOT run. Recreate the loop via /loop or delete the file.`,
+    }),
+  );
+  process.exit(0);
+}
+
+const iteration = Number(state.iteration || 0);
+if (state.max_iterations <= 0 || iteration >= state.max_iterations) {
+  try {
+    rmSync(statePath, { force: true });
+  } catch {}
+  process.stdout.write(
+    JSON.stringify({
+      systemMessage: `Loop budget exhausted (${iteration}/${state.max_iterations}). Stopping. Report remaining failures honestly — do not claim success.`,
+    }),
+  );
+  process.exit(0);
+}
+
+const timeout = Number(state.timeout_seconds || 600) * 1000;
+const maxOut = Number(state.max_output || 6000);
+let passed = false;
+let output = "";
+try {
+  output = execSync(state.oracle, { cwd, timeout, encoding: "utf-8", stdio: "pipe" });
+  passed = true;
+} catch (e) {
+  output = `${e.stdout || ""}\n${e.stderr || ""}`.trim() || String(e.message || e);
+}
+
+if (passed) {
+  try {
+    rmSync(statePath, { force: true });
+  } catch {}
+  process.stdout.write(
+    JSON.stringify({
+      systemMessage: `✅ Loop complete: oracle passed after ${iteration} fix iteration(s).\nOracle: ${state.oracle}\n${output.slice(-1500)}`,
+    }),
+  );
+  process.exit(0);
+}
+
+const sig = createHash("sha1").update(output.slice(-2000)).digest("hex").slice(0, 12);
+const streak = state.last_failure_sig === sig ? Number(state.failure_streak || 0) + 1 : 1;
+state.iteration = iteration + 1;
+state.last_failure_sig = sig;
+state.failure_streak = streak;
+try {
+  writeFileSync(statePath, JSON.stringify(state, null, 2));
+} catch {}
+
+const stall =
+  streak >= 3
+    ? `\n⚠️ STALLED: this exact failure has now survived ${streak} consecutive iterations. Stop patching — re-plan before the next attempt.`
+    : "";
+process.stdout.write(
+  JSON.stringify({
+    decision: "block",
+    reason: `🔄 Verification loop — iteration ${iteration + 1}/${state.max_iterations}.\n${state.goal ? `GOAL: ${state.goal}\n` : ""}ORACLE: ${state.oracle}\n--- oracle output (tail) ---\n${output.slice(-maxOut)}\n--- end ---\n${stall}\nPick the FIRST/most-upstream failure, smallest real fix, never skip/delete tests or loosen assertions. To cancel: delete the loop file and explain why.`,
+  }),
+);
+process.exit(0);
