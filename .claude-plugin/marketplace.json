@@ -2,15 +2,21 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "maaaw-kit-marketplace",
   "version": "3.0.0-alpha.0",
-  "description": "MaaawKit production skills, hooks, agents, first-class project memory, and a cross-agent orchestration bridge for Claude Code",
+  "description": "MaaawKit: production engineering skills, safety hooks, specialist agents, first-class project memory, and a cross-agent orchestration bridge for Claude Code",
   "owner": {
     "name": "Maaaw"
   },
   "plugins": [
     {
       "name": "maaaw-kit",
-      "description": "MaaawKit: 16 engineering skills (.NET/PowerShell/TS/Python), safety+quality+loop hooks, 8 specialist agents incl. swarm auditors, 17 commands, first-class project memory, and an agent bridge delegating bounded tasks to Codex/Gemini/other CLIs",
+      "description": "The core kit: engineering skills (.NET/PowerShell/TS/Python), safety+quality+loop hooks (zero-install node shims), swarm auditor agents with findings contracts, first-class project memory, and chained workflow commands",
       "source": "./plugins/maaaw-kit",
+      "category": "development"
+    },
+    {
+      "name": "maaaw-bridge",
+      "description": "The orchestration layer: /bridge job control over Codex/Gemini/Cursor/Copilot/opencode, /cross-review second-model reviews, universal agent handoff, and one-source rules sync. Pairs with the maaawkit npm engine",
+      "source": "./plugins/maaaw-bridge",
       "category": "development"
     }
   ]

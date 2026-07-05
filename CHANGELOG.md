@@ -1,5 +1,48 @@
 # Changelog
 
+## 3.0.0-alpha.0 — 2026-07-05 — the TypeScript engine (clean break from 2.6)
+
+One TypeScript engine (`maaawkit` on npm, `maaaw` CLI) with content attached,
+exposed as CLI + MCP server + zero-dependency hook shims. **No backwards
+compatibility** — see docs/MIGRATION-3.0.md for the 2.6 → 3.0 map.
+
+- **Engine**: Node ≥20 ESM, strict TS; zod domain schemas with committed JSON
+  Schema exports; layered config (defaults < user < .agent/kit.json < MAAAW_*
+  env < CLI); vendor-neutral `.agent/` state standard with atomic, locked
+  writes; `maaaw doctor` (env/config/state/hooks/memory/rules-drift/adapters).
+- **Hooks**: four zero-dep .mjs shims (guard, post-edit, stop-verify,
+  session-context) that upgrade to full engine behavior when `maaawkit` is
+  installed; embedded fallback generated from the same rule table (CI drift
+  gate); guard levels (relaxed/standard/strict) + custom rules from kit.json;
+  Python hooks and selftest.py deleted.
+- **Bridge**: adapter registry (codex, claude, copilot, cursor, gemini,
+  opencode + adapters.json overrides), prepared-by-default jobs, background
+  execution with tree-kill cancel, mandatory worktree isolation for write
+  modes (patch+stat return), oracle verdicts, `--resume` thread plumbing, and
+  guard policy screening every task and built command before anything runs.
+- **Memory**: first-class subsystem — schema-valid markdown records with a
+  lifecycle (capture/consolidate/decay/confirm/promote/archive), BM25-lite
+  recall with hit tracking, budgeted session digest ranked by path overlap
+  with changed files, promotion into `.agent/rules.md`.
+- **Rules/convert/install**: one canonical model compiled into AGENTS.md,
+  CLAUDE.md, .cursor/rules, copilot-instructions, GEMINI.md, .windsurfrules —
+  marker-managed, backed up, idempotent; drift surfaced by doctor.
+- **Handoff**: `.agent/handoff/HANDOFF.md` + schema-valid handoff.json
+  carrying top path-relevant memory records.
+- **MCP server**: `maaaw mcp serve` (bridge_*, memory_*, rules_sync,
+  handoff_*) over the same core; write-mode bridge jobs deny-by-default with
+  per-client opt-in.
+- **Content**: split into `maaaw-kit` (11 skills, 8 contract-bearing agents,
+  14 commands, 4 shims) and `maaaw-bridge` (5 skills, 3 commands); merges
+  (quick-audit→codebase-audit, workflow-orchestration→orchestration), new
+  agent-bridge/agent-handoff/cross-review/cross-model-prompting/rules-sync
+  skills; dials; interview /kit-setup; chained commands.
+- **Quality**: 238 tests (porting specs, integration vs fake agent CLIs,
+  property tests, latency budgets), ≥80% line coverage gate on src/, 3-OS ×
+  2-Node CI, `npm audit --omit=dev` gate, release workflow with npm
+  provenance; `maaaw validate` enforces budgets, contracts, cross-refs, and
+  count drift.
+
 ## 2.6.0 — 2026-07-02 — Codex worker delegation + README refresh
 - Added `codex-worker` skill, `/codex-worker` command, and `scripts/codex-worker.py` for bounded Claude→Codex delegation during a live Claude Code session.
 - Worker modes: `review-only`, `security-pass`, `implementation-worktree`, `backend-task`, and `test-fix`. Review modes use Codex read-only sandbox; write-capable modes create isolated git worktrees and mirror result/patch/stat files back to `.codex/results/`.

@@ -188,11 +188,11 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
     }
   }
 
-  // docs count drift: README/marketplace claims must match reality
+  // docs count drift: README/marketplace claims must match reality (all plugins)
   const counts = {
-    skills: skillMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
-    agents: agentMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
-    commands: commandMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
+    skills: skillMd.length,
+    agents: agentMd.length,
+    commands: commandMd.length,
   };
   for (const doc of ["README.md", ".claude-plugin/marketplace.json"]) {
     const f = relFiles.find((x) => x.rel === doc);

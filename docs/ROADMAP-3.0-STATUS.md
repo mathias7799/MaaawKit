@@ -14,7 +14,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ✅ | drift panel in doctor; promoted memory reaches AGENTS.md (closes the Phase 4 leftover) |
 | 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ✅ | 16 skills / 17 commands / 8 contract-bearing agents; validator enforces budgets + contracts |
 | 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ✅ | done before Phase 6 (phases 4–7 reorderable per roadmap); SECURITY.md rewritten; docs/MCP.md registration guide |
-| 8 | Split, distribution, launch (plugin split, npm, migration guide, ADRs) | ⬜ | |
+| 8 | Split, distribution, launch (plugin split, npm, migration guide, ADRs) | ✅ | maaaw-kit + maaaw-bridge on one marketplace; release workflow with provenance; publish + clean-machine channel tests await an actual release |
 
 ## Acceptance-criteria ledger
 
@@ -68,9 +68,21 @@ Notes from the (older) content-structure spec, applied selectively per owner gui
 - [x] Write-mode denied by default from MCP; per-client opt-in via kit.json mcp.writeModeClients (tested: opted-in client allowed, other client still denied); guard refusal identical through MCP
 
 ### Phase 8
-- [ ] Plugin split (maaaw-kit + maaaw-bridge), one marketplace
-- [ ] Migration guide 2.6→3.0
-- [ ] ADRs recorded for every Part-I decision incl. rejections
+- [x] Plugin split (maaaw-kit: 11 skills / 8 agents / 14 commands / 4 shims; maaaw-bridge: 5 skills / 3 commands), one marketplace; validator counts across both
+- [x] Migration guide 2.6→3.0 (docs/MIGRATION-3.0.md — a breaking-changes map, per the no-backwards-compat directive)
+- [x] ADRs recorded incl. rejections (docs/adr/0001–0007: TS-not-Python, single package not workspace, zero-dep shims, no-backwards-compat, no embeddings, no transcript transfer, deny-by-default MCP writes); ARCHITECTURE.md + MEMORY.md + MCP.md written
+- [x] Release workflow with npm provenance (.github/workflows/release.yml, gated on lint/typecheck/coverage/validate/doctor/audit)
+- [ ] Clean-machine install test per channel + actual npm publish/marketplace 3.0.0 tag — PENDING an actual release by the owner (needs NPM_TOKEN secret and a v3.0.0 tag; everything is wired)
+
+## Success criteria scorecard (roadmap Part IV)
+
+- **Engine**: ✅ strict TS clean; 238 tests; ~90% line coverage on src/ (gate ≥80); CI matrix 3 OS × Node 20/22 configured (remote cells verify on first PR).
+- **Orchestration**: ✅ dispatch/monitor/cancel background jobs proven against the fake CLI (real codex smoke pending a machine with Codex); ✅ bidirectional MCP demo automated in tests + documented.
+- **Memory**: ✅ full lifecycle live; ✅ digest under budget (property-tested); ✅ promoted record flows into converted AGENTS.md; ✅ memory reaches non-Claude agents via handoff.json, converted files, and MCP memory_recall.
+- **Universality**: ✅ rules + memory converted and installed into 6 tool formats from one source.
+- **Safety**: ✅ guard policy identical across hook/CLI/MCP (one engine + generated-fallback drift gate + MCP guard test); ✅ provenance wired into the release workflow (proves out at first publish).
+- **Content**: ✅ 16 skills ≤80 lines (validator-enforced), 8 contract-bearing agents, chained commands, interview-driven config.
+- **Identity**: mechanical safety + cross-agent shared memory + engineered agents + vendor-neutral orchestration — all four pillars implemented and tested; honest caveats: vendor adapter specs beyond codex are marked `unverified` and surfaced as such by doctor.
 
 ## Decision log (session)
 

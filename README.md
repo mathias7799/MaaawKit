@@ -2,7 +2,7 @@
 
 [![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) · MIT · Windows / macOS / Linux · Node ≥ 20
 
-**MaaawKit 3.0** is one TypeScript engine with content attached: a cross-agent
+**MaaawKit 3.0** is one TypeScript engine with two content plugins attached: a cross-agent
 orchestration **bridge**, first-class project **memory**, canonical **rules**,
 and mechanical **safety hooks** — exposed as a CLI (`maaaw`), an MCP server,
 and zero-dependency Claude Code hook shims. On top of the engine sits a
@@ -40,7 +40,8 @@ Inside Claude Code:
 
 ```text
 /plugin marketplace add maaaw/maaaw-kit
-/plugin install maaaw-kit@maaaw-kit-marketplace
+/plugin install maaaw-kit@maaaw-kit-marketplace          # core: skills, hooks, agents, memory
+/plugin install maaaw-bridge@maaaw-kit-marketplace       # orchestration: /bridge, /cross-review, /rules-sync
 ```
 
 The hooks work immediately with zero installs (embedded fallback). For full
@@ -249,7 +250,8 @@ Repository layout:
 ```text
 src/          # engine: bridge/ hooks/ memory/ convert/ schemas/ config/ state/ cli/ mcp/
 shims/        # zero-dep hook shims (generated from templates + rule table)
-plugins/maaaw-kit/   # content: skills, agents, commands, hooks.json
+plugins/maaaw-kit/     # core content: skills, agents, commands, hook shims
+plugins/maaaw-bridge/  # orchestration content: bridge/handoff/cross-review skills
 schemas/      # exported JSON Schemas (generated, committed)
 tests/        # porting specs + integration tests (fake agent CLIs)
 docs/         # roadmap status, architecture notes

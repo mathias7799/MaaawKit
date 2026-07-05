@@ -1,0 +1,21 @@
+{
+  "name": "maaaw-bridge",
+  "version": "3.0.0-alpha.0",
+  "description": "MaaawKit orchestration layer: delegate bounded tasks to Codex/Gemini/Cursor/Copilot/opencode via the maaaw bridge engine, cross-model review, universal agent handoff, and one-source rules sync. Requires the maaawkit npm package.",
+  "author": {
+    "name": "Maaaw"
+  },
+  "displayName": "MaaawKit Bridge",
+  "license": "MIT",
+  "homepage": "https://maaaw.dk",
+  "repository": "https://github.com/maaaw/maaaw-kit",
+  "keywords": [
+    "bridge",
+    "orchestration",
+    "codex",
+    "gemini",
+    "cross-review",
+    "handoff",
+    "mcp"
+  ]
+}
