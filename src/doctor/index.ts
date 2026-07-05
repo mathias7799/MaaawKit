@@ -125,16 +125,34 @@ export async function runDoctor(
       checks.push({
         name: "memory",
         status,
-        detail:
-          `${health.total} record(s): ${health.active} active, ${health.stale} stale (${health.stalePercent}%), ` +
-          `${health.promoted} promoted, ${health.archived} archived; digest ~${health.digestTokens} tokens` +
-          (health.promotionCandidates > 0
+        detail: `${health.total} record(s): ${health.active} active, ${health.stale} stale (${health.stalePercent}%), ${health.promoted} promoted, ${health.archived} archived; digest ~${health.digestTokens} tokens${
+          health.promotionCandidates > 0
             ? `; ${health.promotionCandidates} promotion candidate(s) — run \`maaaw memory review\``
-            : ""),
+            : ""
+        }`,
       });
     } catch {
       checks.push({ name: "memory", status: "warn", detail: "memory health check failed" });
     }
+  }
+
+  // --- rules drift ---
+  try {
+    const { rulesDrift } = await import("../convert/convert.js");
+    const drift = rulesDrift(cwd);
+    const stale = drift.filter((d) => d.state === "drifted" || d.state === "absent");
+    if (drift.length > 0) {
+      checks.push({
+        name: "rules artifacts",
+        status: stale.length > 0 ? "warn" : "ok",
+        detail:
+          stale.length > 0
+            ? `${stale.map((d) => `${d.relPath} (${d.state})`).join(", ")} — run \`maaaw rules sync\``
+            : `${drift.length} artifact(s) in sync`,
+      });
+    }
+  } catch {
+    // rules drift is informational only
   }
 
   // --- adapters ---

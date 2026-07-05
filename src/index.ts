@@ -2,6 +2,10 @@ export * from "./hooks/index.js";
 export * from "./convert/markers.js";
 export * from "./bridge/index.js";
 export * from "./memory/index.js";
+export * from "./rules/index.js";
+export * from "./convert/targets.js";
+export * from "./convert/convert.js";
+export * from "./handoff/index.js";
 export { validateRepo, type ValidateOptions, type ValidateResult } from "./validate/index.js";
 export { VERSION } from "./version.js";
 export {

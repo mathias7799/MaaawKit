@@ -468,6 +468,133 @@ const memory = defineCommand({
   },
 });
 
+const convert = defineCommand({
+  meta: {
+    name: "convert",
+    description: "Render canonical rules and preview per-tool artifacts (no placement)",
+  },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { installRules } = await import("../convert/convert.js");
+    const report = installRules({ cwd: args.cwd, all: true, dryRun: true });
+    console.log(report.body);
+    console.log("\n--- would touch ---");
+    for (const a of report.actions) console.log(`${a.tool.padEnd(9)} ${a.relPath}`);
+    for (const w of report.warnings) console.log(pc.yellow(`warning: ${w}`));
+  },
+});
+
+const install = defineCommand({
+  meta: {
+    name: "install",
+    description: "Place rules artifacts into detected tools (AGENTS.md, CLAUDE.md, cursor, …)",
+  },
+  args: {
+    tools: { type: "string", description: "Comma-separated target ids (default: detected)" },
+    all: { type: "boolean", default: false, description: "Install every target" },
+    "dry-run": { type: "boolean", default: false },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { installRules } = await import("../convert/convert.js");
+    const report = installRules({
+      cwd: args.cwd,
+      tools: args.tools ? args.tools.split(",").map((t) => t.trim()) : undefined,
+      all: args.all,
+      dryRun: args["dry-run"],
+    });
+    for (const a of report.actions) {
+      const badge = a.action === "skipped (not detected)" ? pc.dim(a.action) : pc.green(a.action);
+      console.log(`${a.tool.padEnd(9)} ${a.relPath.padEnd(38)} ${badge}`);
+    }
+    for (const w of report.warnings) console.log(pc.yellow(`warning: ${w}`));
+  },
+});
+
+const rulesSync = defineCommand({
+  meta: { name: "sync", description: "Re-render rules and refresh all installed artifacts" },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { installRules, rulesDrift } = await import("../convert/convert.js");
+    const report = installRules({ cwd: args.cwd });
+    for (const a of report.actions)
+      console.log(`${a.tool.padEnd(9)} ${a.relPath.padEnd(38)} ${a.action}`);
+    const drift = rulesDrift(args.cwd).filter((d) => d.state !== "in-sync");
+    if (drift.length === 0) console.log(pc.green("all installed artifacts in sync"));
+  },
+});
+
+const rules = defineCommand({
+  meta: { name: "rules", description: "Canonical rules: sync to every tool format" },
+  subCommands: { sync: rulesSync },
+});
+
+const handoffWrite = defineCommand({
+  meta: { name: "write", description: "Write HANDOFF.md + handoff.json with relevant memory" },
+  args: {
+    goal: { type: "string", required: true },
+    status: { type: "string", required: true },
+    decisions: { type: "string", description: "Semicolon-separated decisions" },
+    next: { type: "string", description: "Semicolon-separated next steps" },
+    verification: { type: "string" },
+    from: { type: "string", default: "claude" },
+    to: { type: "string", description: "Target agent (codex, gemini, …)" },
+    cwd: { type: "string", default: "." },
+  },
+  async run({ args }) {
+    const { writeHandoff } = await import("../handoff/index.js");
+    const { execa } = await import("execa");
+    let changedFiles: string[] = [];
+    try {
+      const r = await execa("git", ["diff", "--name-only", "HEAD"], {
+        cwd: args.cwd,
+        timeout: 10_000,
+      });
+      changedFiles = r.stdout.split("\n").filter(Boolean);
+    } catch {}
+    const split = (s?: string) =>
+      s
+        ? s
+            .split(";")
+            .map((x) => x.trim())
+            .filter(Boolean)
+        : [];
+    const written = writeHandoff(args.cwd, {
+      goal: args.goal,
+      status: args.status,
+      decisions: split(args.decisions),
+      nextSteps: split(args.next),
+      verification: args.verification,
+      fromAgent: args.from,
+      toAgent: args.to,
+      changedFiles,
+    });
+    console.log(`wrote ${written.markdownPath}`);
+    console.log(
+      `wrote ${written.jsonPath} (${written.doc.memoryRecords.length} memory record(s) attached)`,
+    );
+  },
+});
+
+const handoffRead = defineCommand({
+  meta: { name: "read", description: "Print the current handoff" },
+  args: { cwd: { type: "string", default: "." } },
+  async run({ args }) {
+    const { readHandoff } = await import("../handoff/index.js");
+    const h = readHandoff(args.cwd);
+    if (!h.markdown) {
+      console.log("no handoff found (.agent/handoff/HANDOFF.md)");
+      return;
+    }
+    console.log(h.markdown);
+  },
+});
+
+const handoff = defineCommand({
+  meta: { name: "handoff", description: "Cross-agent handoff (HANDOFF.md + handoff.json)" },
+  subCommands: { write: handoffWrite, read: handoffRead },
+});
+
 const main = defineCommand({
   meta: {
     name: "maaaw",
@@ -481,6 +608,10 @@ const main = defineCommand({
     init,
     bridge,
     memory,
+    convert,
+    install,
+    rules,
+    handoff,
   },
 });
 

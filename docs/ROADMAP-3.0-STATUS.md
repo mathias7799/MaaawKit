@@ -11,7 +11,7 @@ phase commit on `claude/implementation-tracking-s9paph`. Statuses: ⬜ not start
 | 2 | Hooks on the engine (ported hooks + zero-dep shims + embedded fallback) | ✅ | Python hooks deleted; plugin runs the node shims; `doctor --hooks` replaces selftest.py |
 | 3 | Bridge engine (adapters, jobs, worktrees, guard-in-bridge, CLI verbs) | ✅ | Python scripts deleted (clean break, no stubs); /bridge + agent-bridge replace codex-worker; README rewritten for 3.0 |
 | 4 | Memory engine (records, lifecycle, digest, recall, promote) | ✅ | migrate waived (no back-compat); promoted→AGENTS.md flow lands with Phase 5 convert |
-| 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ⬜ | |
+| 5 | Rules, convert, install (canonical model, 6 converters, handoff.json) | ✅ | drift panel in doctor; promoted memory reaches AGENTS.md (closes the Phase 4 leftover) |
 | 6 | Content refactor (skill merges, contracts, dials, kit-setup) | ⬜ | |
 | 7 | MCP server (stdio, bridge_/memory_/rules_/handoff_ tools) | ⬜ | |
 | 8 | Split, distribution, launch (plugin split, npm, migration guide, ADRs) | ⬜ | |
@@ -47,13 +47,13 @@ marked ✅.
 - [x] Full lifecycle tested capture→digest→recall→promote (unit + CLI end-to-end smoke: capture → 3 recalls → review suggests → promote → rules.md block → digest excludes promoted → doctor panel)
 - [x] Digest respects token budget under property tests (60 random records × 4 budgets)
 - [~] Migration round-trips a 2.6 memory dir — WAIVED (owner directive: no backwards compatibility; no migrate command ships)
-- [ ] A promoted record appears in converted AGENTS.md — lands with Phase 5 `maaaw convert` (promotion→rules.md flow proven; conversion is the remaining hop)
+- [x] A promoted record appears in converted AGENTS.md (tested end-to-end in Phase 5: promote → rules.md → install → AGENTS.md with provenance id)
 
 ### Phase 5
-- [ ] Convert idempotent (double-run = zero diff)
-- [ ] Markers survive outside-edits (property-tested)
-- [ ] Install places correctly for multiple detected tools
-- [ ] Handoff round-trip carries the memory digest
+- [x] Convert idempotent (double-run = zero diff across all six targets)
+- [x] Markers survive outside-edits (property-tested: 20 rounds of random human edits around the managed block)
+- [x] Install places correctly for multiple detected tools (detection-based; --tools/--all overrides; .bak on first touch)
+- [x] Handoff round-trip carries the memory digest (Claude→Codex→Claude sample: handoff.json memoryRecords + AGENTS.md digest block; return handoff preserves records)
 
 ### Phase 6
 - [ ] `maaaw validate` green with new rules (80-line limit, contract presence)
