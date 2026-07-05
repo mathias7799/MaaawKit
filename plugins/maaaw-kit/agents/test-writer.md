@@ -3,7 +3,6 @@ name: test-writer
 description: Writes high-signal tests for new or existing code. Use after implementing features, when coverage gaps are found, for regression tests after bug fixes, or when the user asks for tests. Supports xUnit (.NET), Pester (PowerShell), Vitest/Jest (TS), pytest (Python).
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
-maxTurns: 20
 ---
 You write tests that prove behavior — not tests that chase coverage numbers.
 
@@ -17,5 +16,6 @@ Process:
 Report: list of behaviors covered, the test run output, and any behaviors you deliberately did NOT test (with reason).
 
 ## Findings Contract
-End your report with exactly one fenced `json` code block containing a FindingsReport matching `schemas/findings-report.schema.json`.
-Use the shared Findings Contract in `plugins/maaaw-kit/skills/orchestration/references/audit-swarm-spec.md`; findings without evidence are dropped, and an empty `findings` array is valid when `notCovered` is honest.
+End report with exactly one fenced `json` code block matching `schemas/findings-report.schema.json`:
+`{"agent":"test-writer","scope":"<scope>","findings":[{"severity":"critical|high|medium|low|info","title":"<title>","evidence":"<file:line evidence>","confidence":"low|medium|high"}],"notCovered":["..."]}`
+Optional finding keys: `file`, `line`, `recommendation`, `lane`. Findings without evidence are dropped; an empty `findings` array is valid when `notCovered` is honest.

@@ -115,15 +115,10 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
       inputSchema: { id: z.string() },
     },
     async (args) => {
-      const { reconcileJob } = await import("../bridge/exec.js");
-      const { existsSync, readFileSync } = await import("node:fs");
-      const job = await reconcileJob(cwd, args.id);
-      if (!job) return errorText(`job not found: ${args.id}`);
-      const result =
-        job.resultPath && existsSync(job.resultPath)
-          ? readFileSync(job.resultPath, "utf-8")
-          : "(no result document yet)";
-      return jsonText({ job, result });
+      const { readJobResultDocument } = await import("../bridge/exec.js");
+      const result = await readJobResultDocument(cwd, args.id);
+      if (!result) return errorText(`job not found: ${args.id}`);
+      return jsonText(result);
     },
   );
 

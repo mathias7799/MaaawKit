@@ -16,7 +16,8 @@ import { runTrustedOracle } from "../hooks/oracle.js";
 import { getPromptAsset } from "../prompts/catalog.js";
 import type { AdapterSpec, JobRecord } from "../schemas/index.js";
 import { agentPaths, ensureStateDirs, withLock, writeFileAtomic } from "../state/index.js";
-import { getAdapter, isGitTracked, substituteArgs } from "./adapters.js";
+import { isGitTracked, isPathInside } from "../trust.js";
+import { getAdapter, substituteArgs } from "./adapters.js";
 import { jobPath, loadJob, newJobId, saveJob, updateJob } from "./jobs.js";
 import {
   type BridgeMode,
@@ -82,6 +83,14 @@ export function checkBridgePolicy(
   }
   if (cmdDecision.decision === "ask" && !allowAsk) {
     throw new PolicyRefusal("ask", `built command: ${cmdDecision.reason ?? ""}`);
+  }
+}
+
+function checkOraclePolicy(oracle: string | undefined): void {
+  if (!oracle) return;
+  const decision = evaluateCommand(oracle);
+  if (decision.decision !== "allow") {
+    throw new PolicyRefusal(decision.decision, `oracle: ${decision.reason ?? ""}`);
   }
 }
 
@@ -177,6 +186,7 @@ export async function prepareJob(opts: PrepareOptions): Promise<PreparedJob> {
 
   // Policy gate — before any worktree or file is created.
   checkBridgePolicy(cwd, opts.task, [spec.bin, ...argv], opts.allowAsk ?? false);
+  checkOraclePolicy(opts.oracle);
 
   let worktree: string | undefined;
   let branch: string | undefined;
@@ -218,8 +228,20 @@ function findRunner(): string {
   throw new Error("job-runner.mjs not found (package layout broken)");
 }
 
-function promptPathFor(job: JobRecord): string {
-  return (job.resultPath ?? "").replace(/\.md$/, ".prompt.md");
+function safeResultPath(cwd: string, job: JobRecord): string | undefined {
+  if (!job.resultPath) return undefined;
+  const resultsDir = agentPaths(cwd).resultsDir;
+  return isPathInside(job.resultPath, resultsDir) ? job.resultPath : undefined;
+}
+
+function safeLogPath(cwd: string, job: JobRecord): string | undefined {
+  if (!job.logPath) return undefined;
+  const logsDir = agentPaths(cwd).logsDir;
+  return isPathInside(job.logPath, logsDir) ? job.logPath : undefined;
+}
+
+function promptPathFor(cwd: string, job: JobRecord): string {
+  return (safeResultPath(cwd, job) ?? "").replace(/\.md$/, ".prompt.md");
 }
 
 function exitFilePath(cwd: string, job: JobRecord): string {
@@ -238,15 +260,17 @@ async function extractThreadId(spec: AdapterSpec, combined: string): Promise<str
 
 async function finalizeJob(cwd: string, job: JobRecord, exitCode: number): Promise<JobRecord> {
   const spec = getAdapter(cwd, job.agent);
-  const log = job.logPath && existsSync(job.logPath) ? readFileSync(job.logPath, "utf-8") : "";
+  const logPath = safeLogPath(cwd, job);
+  const resultPath = safeResultPath(cwd, job);
+  const log = logPath && existsSync(logPath) ? readFileSync(logPath, "utf-8") : "";
 
   // stdout-output adapters: the log IS the result document.
   let resultText = "";
-  if (job.resultPath && existsSync(job.resultPath)) {
-    resultText = readFileSync(job.resultPath, "utf-8");
-  } else if (spec.outputVia === "stdout" && job.resultPath) {
+  if (resultPath && existsSync(resultPath)) {
+    resultText = readFileSync(resultPath, "utf-8");
+  } else if (spec.outputVia === "stdout" && resultPath) {
     resultText = log;
-    if (resultText) writeFileAtomic(job.resultPath, resultText);
+    if (resultText) writeFileAtomic(resultPath, resultText);
   }
 
   const patch: Partial<JobRecord> = {
@@ -270,10 +294,12 @@ async function finalizeJob(cwd: string, job: JobRecord, exitCode: number): Promi
         cwd: job.worktree,
         timeout: 120_000,
       });
-      const patchPath = (job.resultPath ?? "").replace(/\.md$/, ".patch");
-      writeFileAtomic(patchPath, diff.stdout);
-      writeFileAtomic(patchPath.replace(/\.patch$/, ".stat.txt"), stat.stdout);
-      patch.patchPath = patchPath;
+      if (resultPath) {
+        const patchPath = resultPath.replace(/\.md$/, ".patch");
+        writeFileAtomic(patchPath, diff.stdout);
+        writeFileAtomic(patchPath.replace(/\.patch$/, ".stat.txt"), stat.stdout);
+        patch.patchPath = patchPath;
+      }
     } catch {
       // diff capture is best-effort
     }
@@ -286,7 +312,7 @@ async function finalizeJob(cwd: string, job: JobRecord, exitCode: number): Promi
   const oracleTrusted =
     job.oracle !== undefined &&
     !isGitTracked(jobFile, cwd) &&
-    evaluateCommand(job.oracle).decision !== "deny";
+    evaluateCommand(job.oracle).decision === "allow";
   if (job.oracle && exitCode === 0 && oracleTrusted) {
     const oracle = await runTrustedOracle(job.oracle, job.cwd, 600_000);
     patch.oraclePassed = oracle.passed;
@@ -309,7 +335,8 @@ export async function runJob(id: string, opts: RunOptions): Promise<JobRecord> {
   const spec = getAdapter(cwd, job.agent);
   const [bin, ...args] = job.cmd;
   if (!bin) throw new Error(`Job ${id} has an empty command`);
-  const promptPath = promptPathFor(job);
+  const promptPath = promptPathFor(cwd, job);
+  const logPath = safeLogPath(cwd, job);
   const startedAt = new Date().toISOString();
 
   if (opts.background) {
@@ -322,7 +349,7 @@ export async function runJob(id: string, opts: RunOptions): Promise<JobRecord> {
       env: {
         ...spec.env,
         MAAAW_PROMPT_FILE: promptPath,
-        MAAAW_LOG_FILE: job.logPath ?? "",
+        MAAAW_LOG_FILE: logPath ?? "",
         MAAAW_EXIT_FILE: exitFilePath(cwd, job),
         MAAAW_STDIN: spec.promptVia === "stdin" ? "1" : "0",
       },
@@ -345,7 +372,7 @@ export async function runJob(id: string, opts: RunOptions): Promise<JobRecord> {
     reject: false,
     all: true,
   });
-  if (job.logPath) writeFileAtomic(job.logPath, result.all ?? "");
+  if (logPath) writeFileAtomic(logPath, result.all ?? "");
   const running = loadJob(cwd, id);
   if (running?.status === "cancelled") return running;
   return finalizeJob(cwd, { ...job, startedAt }, result.exitCode ?? 1);
@@ -380,6 +407,21 @@ export async function reconcileJob(cwd: string, id: string): Promise<JobRecord |
     }
     return job;
   });
+}
+
+export async function readJobResultDocument(
+  cwd: string,
+  id: string,
+): Promise<{ job: JobRecord; result: string } | null> {
+  const root = resolve(cwd);
+  const job = await reconcileJob(root, id);
+  if (!job) return null;
+  const resultPath = safeResultPath(root, job);
+  const result =
+    resultPath && existsSync(resultPath)
+      ? readFileSync(resultPath, "utf-8")
+      : "(no result document yet)";
+  return { job, result };
 }
 
 /** Cancel a running job: kill the whole process tree, mark cancelled. */

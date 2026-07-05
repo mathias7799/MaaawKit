@@ -1,12 +1,7 @@
 /**
- * Canonical guard rule table — the single source of truth for destructive-command
- * and protected-file policy. The hook engine evaluates these directly; the
- * zero-dependency shim fallback is generated from this same table at build time
- * (shims/build-fallback.mjs), so engine and fallback can never drift.
- *
- * Ported from 2.6 guard.py with one deliberate correction: SQL rules carry an
- * explicit `category: "sql"` instead of being identified by substring-matching
- * the pattern text ("drop" in pattern), which was brittle.
+ * Canonical guard rule table: single source of truth for destructive-command
+ * and protected-file policy. The hook engine evaluates this directly; the
+ * zero-dependency shim fallback is generated from the same table.
  */
 
 export type GuardAction = "deny" | "ask";
@@ -18,7 +13,7 @@ export interface BashRule {
   flags: string;
   message: string;
   action: GuardAction;
-  /** "sql" rules are skipped for text-bearing commands (commit messages, echo). */
+  /** "sql" rules are skipped for text-bearing commands such as commit messages. */
   category?: "sql";
 }
 
@@ -30,17 +25,24 @@ export interface WriteRule {
 
 export const BASH_RULES: readonly BashRule[] = [
   {
-    // Flags: short (-rf, -r -f) or long (--recursive/--force); targets: /, /*,
-    // ~, ~/, $HOME, $HOME/ — with optional trailing slash/glob before the end.
-    pattern: String.raw`\brm\s+((-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\s+)+(/|~|\$HOME)([/*]*)(\s|$)`,
+    // Flags: short (-rf, -r -f) or long (--recursive/--force); targets include
+    // quoted root, root glob, home, ${HOME}, and /etc.
+    pattern: String.raw`\brm\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\b)[^;&|]*?(?:\s--\s*)?(?:"/"|'/'|/(?:\*+)?(?=\s|$)|~[/\\]?(?=\s|$)|(?:\$HOME|\$\{HOME\})[/\\]?(?=\s|$)|/etc(?:[/\\]|(?=\s|$)))`,
     flags: "",
-    message: "Refusing recursive delete of root/home. Target a specific path instead.",
+    message:
+      "Refusing recursive delete of root/home/system paths. Target a specific safe path instead.",
     action: "deny",
   },
   {
     pattern: String.raw`\bgit\s+push(?!.*--force-with-lease)(?=.*(\s--force\b|\s-f\b))`,
     flags: "",
     message: "Force push blocked. Use --force-with-lease, and only on feature branches.",
+    action: "deny",
+  },
+  {
+    pattern: String.raw`\bgit\s+push\b(?=.*\s\+\S+)`,
+    flags: "",
+    message: "Force-push refspecs with leading + are blocked. Use --force-with-lease explicitly.",
     action: "deny",
   },
   {
@@ -58,13 +60,13 @@ export const BASH_RULES: readonly BashRule[] = [
   {
     pattern: String.raw`\bgit\s+checkout\s+\.\s*$|\bgit\s+restore\s+\.\s*$`,
     flags: "",
-    message: "Discarding ALL uncommitted changes — confirm this is intended.",
+    message: "Discarding ALL uncommitted changes — confirm intended.",
     action: "ask",
   },
   {
     pattern: String.raw`\bdd\s+.*\bof=/dev/`,
     flags: "",
-    message: "Writing directly to a device is blocked.",
+    message: "Writing directly to device is blocked.",
     action: "deny",
   },
   {
@@ -90,19 +92,19 @@ export const BASH_RULES: readonly BashRule[] = [
   {
     pattern: String.raw`(?=.*\bRemove-Item\b)(?=.*-Recurse\b)(?=.*-Force\b)(?=.*(\s[a-zA-Z]:\\?(\s|$|['"])|\$env:USERPROFILE|\$HOME\b|\s~[/\\]?(\s|$)))`,
     flags: "i",
-    message: "Refusing recursive force-delete of a drive root or user profile.",
+    message: "Refusing recursive force-delete of drive root or user profile.",
     action: "deny",
   },
   {
     pattern: String.raw`\bgit\s+push\s+.*--mirror\b`,
     flags: "",
-    message: "git push --mirror overwrites the remote wholesale. Blocked.",
+    message: "git push --mirror overwrites remote wholesale. Blocked.",
     action: "deny",
   },
   {
     pattern: String.raw`\bgit\s+branch\s+(-D|--delete\s+--force)\b`,
     flags: "",
-    message: "Force-deleting a branch discards unmerged work.",
+    message: "Force-deleting branch discards unmerged work.",
     action: "ask",
   },
   {
@@ -120,7 +122,7 @@ export const BASH_RULES: readonly BashRule[] = [
   {
     pattern: String.raw`\bkubectl\s+delete\b`,
     flags: "",
-    message: "kubectl delete against a live cluster — confirm target and context.",
+    message: "kubectl delete against live cluster — confirm target context.",
     action: "ask",
   },
   {
@@ -136,9 +138,21 @@ export const BASH_RULES: readonly BashRule[] = [
     action: "ask",
   },
   {
-    pattern: String.raw`curl\s+[^|]*\|\s*(ba)?sh|irm\s+[^|]*\|\s*iex|iwr\s+[^|]*\|\s*iex`,
+    pattern: String.raw`(?:curl|wget)\s+[^|]*\|\s*(ba)?sh|irm\s+[^|]*\|\s*iex|iwr\s+[^|]*\|\s*iex`,
     flags: "",
-    message: "Piping remote scripts to a shell — needs explicit user approval.",
+    message: "Piping remote scripts to shell — needs explicit user approval.",
+    action: "ask",
+  },
+  {
+    pattern: String.raw`(?:>|>>)\s*(?:\.env(?:\.[\w.]+)?|[^\s;&|]+[/\\]\.env(?:\.[\w.]+)?)(?=\s|$|[;&|])`,
+    flags: "",
+    message: "Shell redirection to .env (secrets) needs explicit user approval.",
+    action: "ask",
+  },
+  {
+    pattern: String.raw`(?:>|>>)\s*(?:id_rsa|id_ed25519|[^\s;&|]+\.(?:pem|pfx|key))(?=\s|$|[;&|])`,
+    flags: "",
+    message: "Shell redirection to private key material needs explicit user approval.",
     action: "ask",
   },
   {
@@ -159,7 +173,7 @@ export const PROTECTED_WRITE_RULES: readonly WriteRule[] = [
   {
     pattern: String.raw`(^|[/\\])\.env(\.[\w.]+)?$`,
     flags: "",
-    message: "Writing to .env (secrets). Confirm with the user.",
+    message: "Writing to .env (secrets). Confirm with user.",
   },
   {
     pattern: String.raw`(^|[/\\])(id_rsa|id_ed25519|.*\.pem|.*\.pfx|.*\.key)$`,

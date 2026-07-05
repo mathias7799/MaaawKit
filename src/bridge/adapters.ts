@@ -5,32 +5,17 @@
  * "unverified" specs are best-effort and surfaced as such by doctor.
  */
 
-import { spawnSync } from "node:child_process";
-import { relative } from "node:path";
 import { execa } from "execa";
 import { evaluateCommand } from "../hooks/guard.js";
 import { type AdapterSpec, AdapterSpecSchema } from "../schemas/index.js";
 import { agentPaths, readJsonFileDetailed } from "../state/index.js";
+import { isGitTracked } from "../trust.js";
 
 /**
  * Trust gate for repo-local executable config — same threat model as the
  * stop-verify loop file: a file committed into a cloned repo is exactly the
  * attack vector; locally created ones are untracked.
  */
-export function isGitTracked(path: string, cwd: string): boolean {
-  try {
-    const rel = relative(cwd, path);
-    const r = spawnSync("git", ["ls-files", "--error-unmatch", "--", rel], {
-      cwd,
-      timeout: 10_000,
-      stdio: "ignore",
-    });
-    return r.status === 0;
-  } catch {
-    return false;
-  }
-}
-
 export const BUILTIN_ADAPTERS: Record<string, AdapterSpec> = {
   codex: AdapterSpecSchema.parse({
     id: "codex",

@@ -19,16 +19,27 @@ try {
   const { stdout } = await runHook("guard", raw);
   if (stdout) process.stdout.write(stdout);
   process.exit(0);
-} catch {
+} catch (error) {
+  let localEngineExists = false;
+  try {
+    const { existsSync } = await import("node:fs");
+    localEngineExists = existsSync(new URL("./node_modules/maaawkit", import.meta.url));
+  } catch {
+    localEngineExists = false;
+  }
+  if (localEngineExists) {
+    const message = error instanceof Error ? error.message : String(error);
+    emit("deny", `MaaawKit engine guard failed; refusing instead of falling back: ${message}`);
+  }
   // Engine not installed — embedded fallback below.
 }
 
 const FALLBACK = {
   "bashRules": [
     {
-      "pattern": "\\brm\\s+((-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\\s+)+(/|~|\\$HOME)([/*]*)(\\s|$)",
+      "pattern": "\\brm\\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\\b)[^;&|]*?(?:\\s--\\s*)?(?:\"/\"|'/'|/(?:\\*+)?(?=\\s|$)|~[/\\\\]?(?=\\s|$)|(?:\\$HOME|\\$\\{HOME\\})[/\\\\]?(?=\\s|$)|/etc(?:[/\\\\]|(?=\\s|$)))",
       "flags": "",
-      "message": "Refusing recursive delete of root/home. Target a specific path instead.",
+      "message": "Refusing recursive delete of root/home/system paths. Target a specific safe path instead.",
       "action": "deny",
       "sql": false
     },
@@ -36,6 +47,13 @@ const FALLBACK = {
       "pattern": "\\bgit\\s+push(?!.*--force-with-lease)(?=.*(\\s--force\\b|\\s-f\\b))",
       "flags": "",
       "message": "Force push blocked. Use --force-with-lease, and only on feature branches.",
+      "action": "deny",
+      "sql": false
+    },
+    {
+      "pattern": "\\bgit\\s+push\\b(?=.*\\s\\+\\S+)",
+      "flags": "",
+      "message": "Force-push refspecs with leading + are blocked. Use --force-with-lease explicitly.",
       "action": "deny",
       "sql": false
     },
@@ -56,14 +74,14 @@ const FALLBACK = {
     {
       "pattern": "\\bgit\\s+checkout\\s+\\.\\s*$|\\bgit\\s+restore\\s+\\.\\s*$",
       "flags": "",
-      "message": "Discarding ALL uncommitted changes — confirm this is intended.",
+      "message": "Discarding ALL uncommitted changes — confirm intended.",
       "action": "ask",
       "sql": false
     },
     {
       "pattern": "\\bdd\\s+.*\\bof=/dev/",
       "flags": "",
-      "message": "Writing directly to a device is blocked.",
+      "message": "Writing directly to device is blocked.",
       "action": "deny",
       "sql": false
     },
@@ -91,21 +109,21 @@ const FALLBACK = {
     {
       "pattern": "(?=.*\\bRemove-Item\\b)(?=.*-Recurse\\b)(?=.*-Force\\b)(?=.*(\\s[a-zA-Z]:\\\\?(\\s|$|['\"])|\\$env:USERPROFILE|\\$HOME\\b|\\s~[/\\\\]?(\\s|$)))",
       "flags": "i",
-      "message": "Refusing recursive force-delete of a drive root or user profile.",
+      "message": "Refusing recursive force-delete of drive root or user profile.",
       "action": "deny",
       "sql": false
     },
     {
       "pattern": "\\bgit\\s+push\\s+.*--mirror\\b",
       "flags": "",
-      "message": "git push --mirror overwrites the remote wholesale. Blocked.",
+      "message": "git push --mirror overwrites remote wholesale. Blocked.",
       "action": "deny",
       "sql": false
     },
     {
       "pattern": "\\bgit\\s+branch\\s+(-D|--delete\\s+--force)\\b",
       "flags": "",
-      "message": "Force-deleting a branch discards unmerged work.",
+      "message": "Force-deleting branch discards unmerged work.",
       "action": "ask",
       "sql": false
     },
@@ -126,7 +144,7 @@ const FALLBACK = {
     {
       "pattern": "\\bkubectl\\s+delete\\b",
       "flags": "",
-      "message": "kubectl delete against a live cluster — confirm target and context.",
+      "message": "kubectl delete against live cluster — confirm target context.",
       "action": "ask",
       "sql": false
     },
@@ -145,9 +163,23 @@ const FALLBACK = {
       "sql": false
     },
     {
-      "pattern": "curl\\s+[^|]*\\|\\s*(ba)?sh|irm\\s+[^|]*\\|\\s*iex|iwr\\s+[^|]*\\|\\s*iex",
+      "pattern": "(?:curl|wget)\\s+[^|]*\\|\\s*(ba)?sh|irm\\s+[^|]*\\|\\s*iex|iwr\\s+[^|]*\\|\\s*iex",
       "flags": "",
-      "message": "Piping remote scripts to a shell — needs explicit user approval.",
+      "message": "Piping remote scripts to shell — needs explicit user approval.",
+      "action": "ask",
+      "sql": false
+    },
+    {
+      "pattern": "(?:>|>>)\\s*(?:\\.env(?:\\.[\\w.]+)?|[^\\s;&|]+[/\\\\]\\.env(?:\\.[\\w.]+)?)(?=\\s|$|[;&|])",
+      "flags": "",
+      "message": "Shell redirection to .env (secrets) needs explicit user approval.",
+      "action": "ask",
+      "sql": false
+    },
+    {
+      "pattern": "(?:>|>>)\\s*(?:id_rsa|id_ed25519|[^\\s;&|]+\\.(?:pem|pfx|key))(?=\\s|$|[;&|])",
+      "flags": "",
+      "message": "Shell redirection to private key material needs explicit user approval.",
       "action": "ask",
       "sql": false
     },
@@ -170,7 +202,7 @@ const FALLBACK = {
     {
       "pattern": "(^|[/\\\\])\\.env(\\.[\\w.]+)?$",
       "flags": "",
-      "message": "Writing to .env (secrets). Confirm with the user."
+      "message": "Writing to .env (secrets). Confirm with user."
     },
     {
       "pattern": "(^|[/\\\\])(id_rsa|id_ed25519|.*\\.pem|.*\\.pfx|.*\\.key)$",

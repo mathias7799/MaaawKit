@@ -17,7 +17,18 @@ try {
   const { stdout } = await runHook("guard", raw);
   if (stdout) process.stdout.write(stdout);
   process.exit(0);
-} catch {
+} catch (error) {
+  let localEngineExists = false;
+  try {
+    const { existsSync } = await import("node:fs");
+    localEngineExists = existsSync(new URL("./node_modules/maaawkit", import.meta.url));
+  } catch {
+    localEngineExists = false;
+  }
+  if (localEngineExists) {
+    const message = error instanceof Error ? error.message : String(error);
+    emit("deny", `MaaawKit engine guard failed; refusing instead of falling back: ${message}`);
+  }
   // Engine not installed — embedded fallback below.
 }
 

@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { type GuardLevel, type KitConfig, KitConfigSchema } from "../schemas/index.js";
+import { isGitTracked } from "../trust.js";
 
 export interface ConfigLayerError {
   layer: string;
@@ -127,8 +128,17 @@ export function resolveConfig(options: ResolveOptions): ResolvedConfig {
   const repoPath = repoConfigPath(options.cwd);
   const repo = readJsonLayer(repoPath, "repo", errors);
   if (repo) {
-    merged = mergeLayers(merged, repo);
-    layers.push(`repo (${repoPath})`);
+    if (isGitTracked(repoPath, options.cwd)) {
+      errors.push({
+        layer: "repo",
+        path: repoPath,
+        message:
+          "ignored git-tracked .agent/kit.json; repo-local executable config must be untracked",
+      });
+    } else {
+      merged = mergeLayers(merged, repo);
+      layers.push(`repo (${repoPath})`);
+    }
   }
 
   const fromEnv = envLayer(env);

@@ -8,6 +8,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { type JobRecord, JobRecordSchema } from "../schemas/index.js";
 import { agentPaths, readJsonFile, updateJsonFile, writeJsonFile } from "../state/index.js";
+import { isGitTracked } from "../trust.js";
 
 export function newJobId(): string {
   return `job_${randomBytes(4).toString("hex")}`;
@@ -22,7 +23,9 @@ export function saveJob(cwd: string, job: JobRecord): void {
 }
 
 export function loadJob(cwd: string, id: string): JobRecord | null {
-  const raw = readJsonFile(jobPath(cwd, id));
+  const path = jobPath(cwd, id);
+  if (isGitTracked(path, cwd)) return null;
+  const raw = readJsonFile(path);
   if (!raw) return null;
   const parsed = JobRecordSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
@@ -44,7 +47,9 @@ export function listJobs(cwd: string): JobRecord[] {
   if (!existsSync(dir)) return [];
   const jobs: JobRecord[] = [];
   for (const f of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-    const parsed = JobRecordSchema.safeParse(readJsonFile(join(dir, f)));
+    const path = join(dir, f);
+    if (isGitTracked(path, cwd)) continue;
+    const parsed = JobRecordSchema.safeParse(readJsonFile(path));
     if (parsed.success) jobs.push(parsed.data);
   }
   return jobs.sort((a, b) => a.createdAt.localeCompare(b.createdAt));

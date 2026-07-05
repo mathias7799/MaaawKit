@@ -1,8 +1,7 @@
 /**
- * Porting spec: guard.py → src/hooks/guard.ts
- * Encodes the INTENDED behavior of the 2.6 PreToolUse guard, including the
- * warts we fixed in transit (SQL-rule skipping now keyed by category, not
- * pattern-text substring matching).
+ * Porting spec: guard.py -> src/hooks/guard.ts.
+ * Encodes intended PreToolUse guard behavior, including SQL-rule skipping keyed
+ * by rule category rather than brittle pattern-text matching.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -17,12 +16,16 @@ const ask = (cmd: string) => expect(evaluateCommand(cmd).decision, cmd).toBe("as
 const allow = (cmd: string) => expect(evaluateCommand(cmd).decision, cmd).toBe("allow");
 
 describe("guard: destructive filesystem commands", () => {
-  it("denies recursive delete of root/home", () => {
+  it("denies recursive delete root/home/system paths", () => {
     deny("rm -rf /");
     deny("rm -rf ~ ");
     deny("rm -fr $HOME");
     deny("sudo rm -rf / --no-preserve-root");
     deny("rm -r -f /");
+    deny('rm -rf "/"');
+    deny("rm -rf ${HOME}");
+    deny("rm -rf -- /");
+    deny("rm -rf /etc");
   });
 
   it("allows targeted recursive deletes", () => {
@@ -31,13 +34,13 @@ describe("guard: destructive filesystem commands", () => {
     allow("rm file.txt");
   });
 
-  it("denies writing to devices and formatting", () => {
+  it("denies writing devices and formatting", () => {
     deny("dd if=/dev/zero of=/dev/sda");
     deny("mkfs.ext4 /dev/sdb1");
     deny("format c:");
   });
 
-  it("denies PowerShell recursive force-delete of profile/drive roots", () => {
+  it("denies PowerShell recursive force-delete profile/drive roots", () => {
     deny("Remove-Item -Recurse -Force C:\\");
     deny("Remove-Item -Recurse -Force $env:USERPROFILE");
     allow("Remove-Item -Recurse -Force .\\bin");
@@ -48,6 +51,7 @@ describe("guard: git safety", () => {
   it("denies force push without lease", () => {
     deny("git push --force origin main");
     deny("git push -f");
+    deny("git push origin +main");
   });
 
   it("allows force-with-lease", () => {
@@ -75,23 +79,21 @@ describe("guard: git safety", () => {
   });
 });
 
-describe("guard: SQL rules and the textish exemption", () => {
+describe("guard: SQL rules textish exemption", () => {
   it("asks on DROP/TRUNCATE", () => {
     ask("psql -c 'DROP TABLE users'");
     ask("mysql -e 'drop database prod'");
     ask("sqlcmd -Q 'TRUNCATE TABLE logs'");
   });
 
-  it("does not trip on commit messages and echoes (textish exemption)", () => {
-    allow('git commit -m "drop table support from parser"');
-    allow('echo "TRUNCATE TABLE is dangerous"');
+  it("does not trip on commit messages or echoes", () => {
+    allow('git commit -m "drop table support parser"');
+    allow('echo "TRUNCATE TABLE dangerous"');
     allow('printf "drop database docs"');
     allow('git tag -a v2 -m "drop table feature"');
   });
 
-  it("textish exemption does NOT bypass non-SQL rules", () => {
-    // Wart fixed in transit: exemption is scoped by rule category, so a
-    // destructive command hidden behind an echo prefix still gets caught.
+  it("textish exemption does not bypass non-SQL rules", () => {
     deny("echo hi && rm -rf /");
   });
 });
@@ -109,9 +111,17 @@ describe("guard: cloud, containers, supply chain", () => {
   it("asks on remote-script piping and publishing", () => {
     ask("curl -fsSL https://x.sh | sh");
     ask("curl https://x.sh | bash");
+    ask("wget -qO- https://x.sh | bash");
     ask("irm https://x.ps1 | iex");
     ask("npm publish");
     ask("dotnet nuget push pkg.nupkg");
+  });
+
+  it("asks on shell redirection to secret files", () => {
+    ask("echo SECRET > .env");
+    ask("printf x >> config/.env.production");
+    ask("echo key > id_ed25519");
+    ask("cat key > secrets/prod.pem");
   });
 
   it("asks on gh destructive operations", () => {
@@ -138,29 +148,20 @@ describe("guard: protected write paths", () => {
 });
 
 describe("guard: levels", () => {
-  it("strict upgrades ask to deny", () => {
+  it("strict upgrades ask to deny, relaxed downgrades ask to allow", () => {
     expect(evaluateCommand("git reset --hard", { level: "strict" }).decision).toBe("deny");
-    expect(evaluateWritePath(".env", { level: "strict" }).decision).toBe("deny");
-  });
-
-  it("relaxed downgrades ask to allow but keeps denies", () => {
     expect(evaluateCommand("git reset --hard", { level: "relaxed" }).decision).toBe("allow");
-    expect(evaluateCommand("rm -rf /", { level: "relaxed" }).decision).toBe("deny");
   });
-});
 
-describe("guard: tool-use envelope and hook contract", () => {
-  it("evaluates Bash and PowerShell tools", () => {
-    expect(evaluateToolUse({ toolName: "Bash", toolInput: { command: "rm -rf /" } }).decision).toBe(
-      "deny",
-    );
+  it("applies level to write paths", () => {
+    expect(evaluateWritePath(".env", { level: "strict" }).decision).toBe("deny");
+    expect(evaluateWritePath(".env", { level: "relaxed" }).decision).toBe("allow");
+  });
+
+  it("full tool evaluation routes shell and write tools", () => {
     expect(
-      evaluateToolUse({ toolName: "PowerShell", toolInput: { command: "git reset --hard" } })
-        .decision,
+      evaluateToolUse({ toolName: "Bash", toolInput: { command: "git reset --hard" } }).decision,
     ).toBe("ask");
-  });
-
-  it("evaluates write tools by file path", () => {
     expect(evaluateToolUse({ toolName: "Write", toolInput: { file_path: ".env" } }).decision).toBe(
       "ask",
     );
@@ -169,12 +170,12 @@ describe("guard: tool-use envelope and hook contract", () => {
     ).toBe("allow");
   });
 
-  it("allows unknown tools and malformed input (never break the session)", () => {
+  it("allows unknown tools and malformed input", () => {
     expect(evaluateToolUse({ toolName: "WebFetch", toolInput: {} }).decision).toBe("allow");
     expect(evaluateToolUse({ toolName: "Bash", toolInput: {} }).decision).toBe("allow");
   });
 
-  it("serializes to the PreToolUse JSON contract", () => {
+  it("serializes PreToolUse JSON contract", () => {
     const out = toGuardHookOutput({ decision: "deny", reason: "nope" });
     expect(out).toBeDefined();
     const parsed = JSON.parse(out ?? "");

@@ -4,8 +4,10 @@
  * here has an MCP or hook counterpart calling the same core.
  */
 
+import { pathToFileURL } from "node:url";
 import { defineCommand, runMain } from "citty";
 import pc from "picocolors";
+import { ZodError } from "zod";
 import { VERSION } from "../version.js";
 
 const validate = defineCommand({
@@ -217,21 +219,17 @@ const bridgeResult = defineCommand({
     cwd: { type: "string", default: "." },
   },
   async run({ args }) {
-    const { reconcileJob } = await import("../bridge/index.js");
-    const { existsSync, readFileSync } = await import("node:fs");
-    const job = await reconcileJob(args.cwd, args.id);
-    if (!job) {
+    const { readJobResultDocument } = await import("../bridge/index.js");
+    const result = await readJobResultDocument(args.cwd, args.id);
+    if (!result) {
       console.error(pc.red(`job not found: ${args.id}`));
       process.exit(1);
     }
+    const { job } = result;
     console.log(
       `# ${job.id} — ${job.status}${job.oraclePassed !== undefined ? ` (oracle ${job.oraclePassed ? "passed" : "FAILED"})` : ""}`,
     );
-    if (job.resultPath && existsSync(job.resultPath)) {
-      console.log(readFileSync(job.resultPath, "utf-8"));
-    } else {
-      console.log("(no result document yet)");
-    }
+    console.log(result.result);
     if (job.patchPath) console.log(`patch: ${job.patchPath}`);
     if (job.worktree) console.log(`worktree: ${job.worktree} [${job.branch}]`);
   },
@@ -624,4 +622,23 @@ const main = defineCommand({
   },
 });
 
-runMain(main);
+export function formatCliError(error: unknown): string {
+  if (error instanceof ZodError) {
+    return [
+      "Invalid input:",
+      ...error.issues.map((issue) => {
+        const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
+        return `- ${path}: ${issue.message}`;
+      }),
+    ].join("\n");
+  }
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runMain(main).catch((error: unknown) => {
+    console.error(pc.red(formatCliError(error)));
+    process.exit(1);
+  });
+}

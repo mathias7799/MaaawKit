@@ -10,6 +10,17 @@ canonical **rules**, and mechanical **safety guardrails** — exposed through
 an MCP server, a CLI (`maaaw`), generated tool-native instruction files, and
 host adapters such as Claude Code hook shims.
 
+MaaawKit's moat is mechanical discipline, not prompt volume:
+
+- Guard rules live in one TypeScript data table; generated zero-dependency hook
+  shims are drift-gated against that table.
+- Bridge jobs are prepared by default, guard-screened before execution, and
+  write-mode work happens in an isolated git worktree returned as patch/stat.
+- Repo-local executable state is treated as untrusted when committed, so cloned
+  `.agent/` files cannot silently relax policy or redirect bridge result reads.
+- Memory is a lifecycle: captured records can be recalled, attached to handoffs,
+  and promoted into canonical rules when they earn permanence.
+
 ```text
 MCP-first integration · 16 portable skills · 4 policy hooks · 8 specialist agents · 17 workflows · 1 engine
 ```

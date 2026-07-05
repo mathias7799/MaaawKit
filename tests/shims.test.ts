@@ -142,6 +142,20 @@ describe("guard shim (engine-only behavior)", () => {
     );
     expect(guardDecision(stdout)).toBe("ask");
   });
+
+  it("refuses instead of silently falling back when a present engine fails to load", () => {
+    const broken = tmp("maaaw-shim-broken-engine-");
+    installShims(broken);
+    mkdirSync(join(broken, "node_modules", "maaawkit"), { recursive: true });
+    writeFileSync(
+      join(broken, "node_modules", "maaawkit", "package.json"),
+      JSON.stringify({ name: "maaawkit", type: "module", exports: { "./hooks": "./missing.js" } }),
+    );
+
+    const { stdout } = runShim(broken, "guard.mjs", bash("git reset --hard"));
+    expect(guardDecision(stdout)).toBe("deny");
+    expect(stdout).toContain("engine guard failed");
+  });
 });
 
 describe.each([
