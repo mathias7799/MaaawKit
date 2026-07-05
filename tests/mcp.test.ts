@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
+import { INTEGRATIONS } from "../src/integrations/catalog.js";
 import { createMaaawServer } from "../src/mcp/server.js";
 import { createRecord } from "../src/memory/store.js";
 import { ensureStateDirs, writeJsonFile } from "../src/state/index.js";
@@ -47,6 +48,42 @@ function resultText(result: unknown): string {
   return content?.[0]?.text ?? "";
 }
 
+function resourceText(result: unknown): string {
+  const contents = (result as { contents?: { text?: string }[] }).contents;
+  return contents?.[0]?.text ?? "";
+}
+
+describe("MCP: resources for IDE panels", () => {
+  it("exposes project status, memory digest, and canonical rules as read-only resources", async () => {
+    const cwd = repo();
+    writeJsonFile(join(cwd, ".agent", "kit.json"), { guardLevel: "strict" });
+    writeFileSync(join(cwd, ".agent", "rules.md"), "# Rules\n- Use MCP resources for panels.");
+    createRecord(cwd, {
+      type: "lesson",
+      title: "Panel context",
+      body: "IDE panels should read MCP resources before calling mutating tools.",
+      confidence: "high",
+    });
+    const { client } = await connect(cwd, "cursor");
+
+    const listed = await client.listResources();
+    expect(listed.resources.map((r) => r.uri).sort()).toEqual([
+      "maaaw://memory/digest",
+      "maaaw://project/status",
+      "maaaw://rules/current",
+    ]);
+
+    const project = await client.readResource({ uri: "maaaw://project/status" });
+    expect(JSON.parse(resourceText(project)).config.guardLevel).toBe("strict");
+
+    const digest = await client.readResource({ uri: "maaaw://memory/digest" });
+    expect(resourceText(digest)).toContain("Panel context");
+
+    const rules = await client.readResource({ uri: "maaaw://rules/current" });
+    expect(JSON.parse(resourceText(rules)).rulesText).toContain("Use MCP resources");
+  });
+});
+
 describe("MCP: tool-schema conformance", () => {
   it("exposes the full tool surface with input schemas", async () => {
     const { client } = await connect(repo());
@@ -57,12 +94,21 @@ describe("MCP: tool-schema conformance", () => {
       "bridge_result",
       "bridge_run",
       "bridge_status",
+      "guard_evaluate",
+      "guard_explain",
+      "guard_rules",
       "handoff_read",
       "handoff_write",
+      "maaaw_capabilities",
+      "maaaw_doctor",
+      "maaaw_project",
+      "memory_digest",
       "memory_learn",
       "memory_promote",
       "memory_recall",
+      "rules_read",
       "rules_sync",
+      "rules_validate",
     ]);
     for (const tool of tools) {
       expect(tool.description, tool.name).toBeTruthy();
@@ -76,7 +122,72 @@ describe("MCP: tool-schema conformance", () => {
   });
 });
 
+describe("MCP: ADE/IDE discovery tools", () => {
+  it("reports capabilities, project state, and doctor checks as structured JSON", async () => {
+    const cwd = repo();
+    writeJsonFile(join(cwd, ".agent", "kit.json"), {
+      guardLevel: "strict",
+      mcp: { writeModeClients: ["ide-client"] },
+    });
+    const { client } = await connect(cwd, "ide-client");
+
+    const capabilities = JSON.parse(
+      resultText(await client.callTool({ name: "maaaw_capabilities", arguments: {} })),
+    );
+    expect(capabilities.version).toBeTruthy();
+    expect(capabilities.client).toEqual({ name: "ide-client", writeModeAllowed: true });
+    expect(capabilities.surfaces).toMatchObject({ mcp: true, cli: true, bridge: true });
+    expect(capabilities.environments.map((e: { id: string }) => e.id)).toEqual(
+      INTEGRATIONS.map((i) => i.id),
+    );
+    expect(capabilities.environments.find((e: { id: string }) => e.id === "cursor")).toMatchObject({
+      mcp: true,
+      rulesArtifacts: true,
+    });
+
+    const project = JSON.parse(
+      resultText(await client.callTool({ name: "maaaw_project", arguments: {} })),
+    );
+    expect(project.cwd).toBe(cwd);
+    expect(project.git.insideWorkTree).toBe(true);
+    expect(project.state.initialized).toBe(true);
+    expect(project.config.guardLevel).toBe("strict");
+    expect(project.client.writeModeAllowed).toBe(true);
+
+    const doctor = JSON.parse(
+      resultText(await client.callTool({ name: "maaaw_doctor", arguments: {} })),
+    );
+    expect(doctor.healthy).toBe(true);
+    expect(doctor.checks.some((c: { name: string }) => c.name === "node")).toBe(true);
+  });
+});
+
 describe("MCP: memory tools (cross-agent memory goes live)", () => {
+  it("memory_digest returns the context digest without requiring host-specific hooks", async () => {
+    const cwd = repo();
+    createRecord(cwd, {
+      type: "repo-fact",
+      title: "API tests use fake timers",
+      body: "Use fake timers for retry tests so IDE agents avoid slow sleeps.",
+      paths: ["src/api/**"],
+      confidence: "high",
+    });
+    const { client } = await connect(cwd, "cursor");
+
+    const digest = JSON.parse(
+      resultText(
+        await client.callTool({
+          name: "memory_digest",
+          arguments: { changedFiles: ["src/api/retry.ts"], tokenBudget: 200 },
+        }),
+      ),
+    );
+
+    expect(digest.content).toContain("API tests use fake timers");
+    expect(digest.included.length).toBe(1);
+    expect(digest.tokens).toBeGreaterThan(0);
+  });
+
   it("memory_learn → memory_recall round-trip with hit counting", async () => {
     const cwd = repo();
     const { client } = await connect(cwd);
@@ -118,6 +229,43 @@ describe("MCP: memory tools (cross-agent memory goes live)", () => {
       arguments: { id: "mem_ffffff" },
     });
     expect(missing.isError).toBe(true);
+  });
+});
+
+describe("MCP: guard preflight tools", () => {
+  it("evaluates and explains commands and protected writes with repo guard config", async () => {
+    const cwd = repo();
+    writeJsonFile(join(cwd, ".agent", "kit.json"), { guardLevel: "strict" });
+    const { client } = await connect(cwd, "ide-client");
+
+    const destructive = JSON.parse(
+      resultText(
+        await client.callTool({
+          name: "guard_evaluate",
+          arguments: { toolName: "Bash", command: "git reset --hard" },
+        }),
+      ),
+    );
+    expect(destructive.decision).toBe("deny");
+    expect(destructive.guardLevel).toBe("strict");
+
+    const protectedWrite = JSON.parse(
+      resultText(
+        await client.callTool({
+          name: "guard_explain",
+          arguments: { toolName: "Write", path: ".env" },
+        }),
+      ),
+    );
+    expect(protectedWrite.decision).toBe("deny");
+    expect(protectedWrite.guidance).toContain("Do not proceed");
+
+    const rules = JSON.parse(
+      resultText(await client.callTool({ name: "guard_rules", arguments: {} })),
+    );
+    expect(rules.guardLevel).toBe("strict");
+    expect(rules.bashRules.length).toBeGreaterThan(0);
+    expect(rules.protectedWriteRules.length).toBeGreaterThan(0);
   });
 });
 
@@ -212,6 +360,33 @@ describe("MCP: bridge tools and the write-mode gate", () => {
 });
 
 describe("MCP: rules_sync and handoff round-trip (the bidirectional demo)", () => {
+  it("rules_read and rules_validate expose canonical rules and drift state", async () => {
+    const cwd = repo();
+    writeFileSync(
+      join(cwd, ".agent", "rules.md"),
+      "# Project rules\n- Prefer MCP-first integration.",
+    );
+    writeFileSync(join(cwd, "CLAUDE.md"), "# c\n");
+    const { client } = await connect(cwd, "vscode");
+
+    const rules = JSON.parse(
+      resultText(await client.callTool({ name: "rules_read", arguments: {} })),
+    );
+    expect(rules.rulesText).toContain("Prefer MCP-first integration");
+
+    const before = JSON.parse(
+      resultText(await client.callTool({ name: "rules_validate", arguments: {} })),
+    );
+    expect(before.ok).toBe(false);
+    expect(before.stale.some((d: { relPath: string }) => d.relPath === "CLAUDE.md")).toBe(true);
+
+    await client.callTool({ name: "rules_sync", arguments: {} });
+    const after = JSON.parse(
+      resultText(await client.callTool({ name: "rules_validate", arguments: {} })),
+    );
+    expect(after.ok).toBe(true);
+  });
+
   it("a second agent can write a handoff and sync rules through MCP", async () => {
     const cwd = repo();
     createRecord(cwd, { type: "lesson", title: "shared lesson", body: "known by all agents" });

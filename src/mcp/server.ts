@@ -12,6 +12,7 @@ import { z } from "zod";
 import { type BridgeMode, isWriteMode } from "../bridge/task.js";
 import { resolveConfig } from "../config/index.js";
 import { VERSION } from "../version.js";
+import { registerIdeMcpSurface } from "./ide.js";
 
 export interface McpServerOptions {
   cwd: string;
@@ -35,6 +36,8 @@ export function createMaaawServer(opts: McpServerOptions): McpServer {
     const { config } = resolveConfig({ cwd });
     return config.mcp.writeModeClients.includes(clientName());
   };
+
+  registerIdeMcpSurface(server, { cwd, clientName, writeModeAllowed });
 
   // ---------- bridge ----------
 

@@ -2,19 +2,22 @@
 
 [![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) · MIT · Windows / macOS / Linux · Node ≥ 20
 
-**MaaawKit 3.0** is one TypeScript engine with two content plugins attached: a cross-agent
-orchestration **bridge**, first-class project **memory**, canonical **rules**,
-and mechanical **safety hooks** — exposed as a CLI (`maaaw`), an MCP server,
-and zero-dependency Claude Code hook shims. On top of the engine sits a
-production plugin for Claude Code.
+**MaaawKit 3.0** is a portable agent operating layer for any AI
+Development Environment (ADE) or IDE. It gives Claude Code, Codex, Cursor,
+VS Code/Copilot, Gemini, opencode, and future coding agents the same
+cross-agent orchestration **bridge**, first-class project **memory**,
+canonical **rules**, and mechanical **safety guardrails** — exposed through
+an MCP server, a CLI (`maaaw`), generated tool-native instruction files, and
+host adapters such as Claude Code hook shims.
 
 ```text
-16 skills · 4 hooks · 8 specialist agents · 17 slash commands · 1 engine
+MCP-first integration · 16 portable skills · 4 policy hooks · 8 specialist agents · 17 workflows · 1 engine
 ```
 
 ## Why MaaawKit exists
 
-AI coding sessions usually fail for the same reasons:
+AI coding sessions usually fail for the same reasons, no matter which ADE or
+IDE is hosting the model:
 
 - the agent starts implementing before understanding the repo,
 - rules live in prose and get ignored under pressure,
@@ -23,35 +26,71 @@ AI coding sessions usually fail for the same reasons:
 - handoffs between agents and humans are lossy,
 - safety depends on the model "remembering" not to do dangerous things.
 
-MaaawKit splits responsibility clearly:
+MaaawKit makes those responsibilities portable and mechanical:
 
 ```text
-Engine   = bridge, memory, rules, guard policy — tested TypeScript, one implementation
-Skills   = judgment and reusable workflows
-Hooks    = mechanical guardrails (shims run with zero installs; engine enhances them)
-Agents   = focused specialist reviewers
-Commands = repeatable entry points
-Memory   = schema-valid records with a real lifecycle, shared across agents
+Engine      = bridge, memory, rules, guard policy — tested TypeScript, one implementation
+MCP         = universal ADE/IDE control plane for memory, rules, bridge, and handoff
+CLI         = local automation for setup, doctor, bridge, validation, and sync
+Workflows   = reusable plans/reviews/audits rendered as commands or MCP flows
+Hooks       = host event adapters where available; CLI/MCP preflight elsewhere
+Agents      = focused specialist reviewers with machine-readable contracts
+Memory      = schema-valid records with a real lifecycle, shared across agents
 ```
+
+## Supported environments
+
+MaaawKit is MCP-first and degrades gracefully: hosts with native hooks get
+real-time guardrails; hosts without hooks still get the same engine through
+MCP, CLI preflight, generated rules, and worktree-isolated bridge jobs.
+
+| Environment | MCP | Rules/install artifacts | Memory | Hooks/events | Bridge | Native workflows |
+|---|---:|---:|---:|---:|---:|---:|
+| Claude Code | ✅ | ✅ | ✅ | ✅ hook shims | ✅ | ✅ slash commands |
+| Codex CLI | ✅ | ✅ | ✅ | via MCP/CLI preflight | ✅ | via MCP/CLI |
+| Cursor | ✅ | ✅ | ✅ | via MCP/CLI preflight | ✅ | via MCP |
+| VS Code / Copilot | ✅ | ✅ | ✅ | via MCP/CLI preflight | ✅ | via MCP |
+| Gemini CLI | ✅ | ✅ | ✅ | via MCP/CLI preflight | ✅ | via MCP/CLI |
+| opencode | planned/CLI | ✅ | ✅ | via CLI preflight | ✅ | via CLI |
+| Other ADEs/IDEs | MCP stdio | generated files | `.agent/` | host adapter or preflight | adapter-based | MCP/CLI |
 
 ## Install
 
-Inside Claude Code:
+### Universal MCP install (recommended)
+
+Register the same server command in your ADE/IDE from the repo root:
+
+```bash
+npx -y maaawkit mcp serve
+```
+
+Then initialize the project state and verify the machine:
+
+```bash
+npx -y maaawkit init      # creates .agent/ state + kit.json in your repo
+npx -y maaawkit doctor    # checks config, hooks, memory, rules, and adapters
+```
+
+See `docs/MCP.md` for registration snippets for Claude Code, Codex CLI,
+Cursor, VS Code/Copilot, and Gemini CLI.
+
+### Optional global CLI
+
+```bash
+npm install -g maaawkit
+maaaw init
+maaaw doctor --hooks
+```
+
+### Optional Claude Code native plugin
+
+Claude Code can use the universal MCP server, plus native plugin packaging for
+slash commands and hook shims:
 
 ```text
 /plugin marketplace add maaaw/maaaw-kit
 /plugin install maaaw-kit@maaaw-kit-marketplace          # core: skills, hooks, agents, memory
 /plugin install maaaw-bridge@maaaw-kit-marketplace       # orchestration: /bridge, /cross-review, /rules-sync
-```
-
-The hooks work immediately with zero installs (embedded fallback). For full
-behavior — config-aware guard levels, memory digest injection, the bridge —
-install the engine:
-
-```bash
-npm install -g maaawkit   # or: npx -y maaawkit doctor
-maaaw init                # creates .agent/ state + kit.json in your repo
-maaaw doctor --hooks      # verify everything on this machine
 ```
 
 Requirements:
@@ -64,11 +103,15 @@ Requirements:
 
 ## Quickstart
 
+MCP-first hosts can ask for MaaawKit tools such as `memory_recall`,
+`rules_sync`, `bridge_run`, and `handoff_write`. Claude Code users can also use
+native commands:
+
 ```text
 /kit-setup
 ```
 
-Common commands:
+Common workflows:
 
 ```text
 /plan "Add idempotent webhook retries"
