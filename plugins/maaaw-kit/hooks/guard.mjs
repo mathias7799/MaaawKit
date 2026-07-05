@@ -37,7 +37,7 @@ try {
 const FALLBACK = {
   "bashRules": [
     {
-      "pattern": "\\brm\\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\\b)[^;&|]*?(?:\\s--\\s*)?(?:\"/\"|'/'|/(?:\\*+)?(?=\\s|$)|~[/\\\\]?(?=\\s|$)|(?:\\$HOME|\\$\\{HOME\\})[/\\\\]?(?=\\s|$)|/etc(?:[/\\\\]|(?=\\s|$)))",
+      "pattern": "\\brm\\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\\b)[^;&|]*?\\s['\"]?(?:/(?:\\*+)?|~[/\\\\]?|(?:\\$HOME|\\$\\{HOME\\})[/\\\\]?|/(?:etc|usr|var|bin|sbin|lib|lib64|boot|sys|proc|dev|root|home|opt)(?:/\\*?|/)?)['\"]?(?=\\s|$)",
       "flags": "",
       "message": "Refusing recursive delete of root/home/system paths. Target a specific safe path instead.",
       "action": "deny",
@@ -163,7 +163,7 @@ const FALLBACK = {
       "sql": false
     },
     {
-      "pattern": "(?:curl|wget)\\s+[^|]*\\|\\s*(ba)?sh|irm\\s+[^|]*\\|\\s*iex|iwr\\s+[^|]*\\|\\s*iex",
+      "pattern": "(?:curl|wget)\\s+[^|]*\\|\\s*(?:sudo\\s+)?(?:(?:ba|z|k|da)?sh|fish)\\b|irm\\s+[^|]*\\|\\s*iex|iwr\\s+[^|]*\\|\\s*iex",
       "flags": "",
       "message": "Piping remote scripts to shell — needs explicit user approval.",
       "action": "ask",
@@ -180,6 +180,13 @@ const FALLBACK = {
       "pattern": "(?:>|>>)\\s*(?:id_rsa|id_ed25519|[^\\s;&|]+\\.(?:pem|pfx|key))(?=\\s|$|[;&|])",
       "flags": "",
       "message": "Shell redirection to private key material needs explicit user approval.",
+      "action": "ask",
+      "sql": false
+    },
+    {
+      "pattern": "\\btee\\s+(?:-a\\s+)?(?:\\.env(?:\\.[\\w.]+)?|[^\\s;&|]+[/\\\\]\\.env(?:\\.[\\w.]+)?|id_rsa|id_ed25519|[^\\s;&|]+\\.(?:pem|pfx|key))(?=\\s|$|[;&|])",
+      "flags": "",
+      "message": "Writing secrets/keys via tee — needs explicit user approval.",
       "action": "ask",
       "sql": false
     },

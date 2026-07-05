@@ -25,9 +25,11 @@ export interface WriteRule {
 
 export const BASH_RULES: readonly BashRule[] = [
   {
-    // Flags: short (-rf, -r -f) or long (--recursive/--force); targets include
-    // quoted root, root glob, home, ${HOME}, and /etc.
-    pattern: String.raw`\brm\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\b)[^;&|]*?(?:\s--\s*)?(?:"/"|'/'|/(?:\*+)?(?=\s|$)|~[/\\]?(?=\s|$)|(?:\$HOME|\$\{HOME\})[/\\]?(?=\s|$)|/etc(?:[/\\]|(?=\s|$)))`,
+    // Flags: short (-rf, -r -f) or long (--recursive/--force). Targets (each at
+    // an argument boundary, optionally quoted): root and root glob, home, $HOME/
+    // ${HOME}, and top-level system dirs (bare, trailing slash, or glob only —
+    // deep subpaths like /var/log/app stay allowed to avoid false positives).
+    pattern: String.raw`\brm\s+(?=[^;&|]*(?:-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\b)[^;&|]*?\s['"]?(?:/(?:\*+)?|~[/\\]?|(?:\$HOME|\$\{HOME\})[/\\]?|/(?:etc|usr|var|bin|sbin|lib|lib64|boot|sys|proc|dev|root|home|opt)(?:/\*?|/)?)['"]?(?=\s|$)`,
     flags: "",
     message:
       "Refusing recursive delete of root/home/system paths. Target a specific safe path instead.",
@@ -138,7 +140,7 @@ export const BASH_RULES: readonly BashRule[] = [
     action: "ask",
   },
   {
-    pattern: String.raw`(?:curl|wget)\s+[^|]*\|\s*(ba)?sh|irm\s+[^|]*\|\s*iex|iwr\s+[^|]*\|\s*iex`,
+    pattern: String.raw`(?:curl|wget)\s+[^|]*\|\s*(?:sudo\s+)?(?:(?:ba|z|k|da)?sh|fish)\b|irm\s+[^|]*\|\s*iex|iwr\s+[^|]*\|\s*iex`,
     flags: "",
     message: "Piping remote scripts to shell — needs explicit user approval.",
     action: "ask",
@@ -153,6 +155,12 @@ export const BASH_RULES: readonly BashRule[] = [
     pattern: String.raw`(?:>|>>)\s*(?:id_rsa|id_ed25519|[^\s;&|]+\.(?:pem|pfx|key))(?=\s|$|[;&|])`,
     flags: "",
     message: "Shell redirection to private key material needs explicit user approval.",
+    action: "ask",
+  },
+  {
+    pattern: String.raw`\btee\s+(?:-a\s+)?(?:\.env(?:\.[\w.]+)?|[^\s;&|]+[/\\]\.env(?:\.[\w.]+)?|id_rsa|id_ed25519|[^\s;&|]+\.(?:pem|pfx|key))(?=\s|$|[;&|])`,
+    flags: "",
+    message: "Writing secrets/keys via tee — needs explicit user approval.",
     action: "ask",
   },
   {

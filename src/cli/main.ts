@@ -7,7 +7,6 @@
 import { pathToFileURL } from "node:url";
 import { defineCommand, runMain } from "citty";
 import pc from "picocolors";
-import { ZodError } from "zod";
 import { VERSION } from "../version.js";
 
 const validate = defineCommand({
@@ -309,13 +308,14 @@ const memoryAdd = defineCommand({
   },
   async run({ args }) {
     const { createRecord } = await import("../memory/index.js");
+    const { ConfidenceSchema, MemoryTypeSchema } = await import("../schemas/index.js");
     const record = createRecord(args.cwd, {
-      type: args.type as never,
+      type: MemoryTypeSchema.parse(args.type),
       title: args.title,
       body: args.body,
       tags: args.tags ? args.tags.split(",").map((t) => t.trim()) : [],
       paths: args.paths ? args.paths.split(",").map((p) => p.trim()) : [],
-      confidence: args.confidence as never,
+      confidence: ConfidenceSchema.parse(args.confidence),
       source: args.source,
     });
     console.log(`captured ${record.id}: ${record.title}`);
@@ -622,11 +622,34 @@ const main = defineCommand({
   },
 });
 
+interface ZodIssueLike {
+  path: (string | number)[];
+  message: string;
+}
+
+/**
+ * Detect a ZodError structurally, by its `issues` array — NOT via `instanceof`.
+ * The engine schemas use `zod/v4` while this file's zod is v3, so the two
+ * ZodError classes are distinct objects; an `instanceof` check silently misses
+ * every engine-originated validation error and dumps raw JSON. Duck-typing is
+ * robust across both zod instances.
+ */
+function zodIssues(error: unknown): ZodIssueLike[] | null {
+  if (!error || typeof error !== "object") return null;
+  const issues = (error as { issues?: unknown }).issues;
+  if (!Array.isArray(issues)) return null;
+  return issues.filter(
+    (i): i is ZodIssueLike =>
+      !!i && typeof i === "object" && Array.isArray((i as ZodIssueLike).path),
+  );
+}
+
 export function formatCliError(error: unknown): string {
-  if (error instanceof ZodError) {
+  const issues = zodIssues(error);
+  if (issues) {
     return [
       "Invalid input:",
-      ...error.issues.map((issue) => {
+      ...issues.map((issue) => {
         const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
         return `- ${path}: ${issue.message}`;
       }),

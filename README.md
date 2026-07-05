@@ -21,6 +21,8 @@ MaaawKit's moat is mechanical discipline, not prompt volume:
 - Memory is a lifecycle: captured records can be recalled, attached to handoffs,
   and promoted into canonical rules when they earn permanence.
 
+How this compares to other agent kits, and who it is for: `docs/POSITIONING.md`.
+
 ```text
 MCP-first integration · 16 portable skills · 4 policy hooks · 8 specialist agents · 17 workflows · 1 engine
 ```

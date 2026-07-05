@@ -35,21 +35,56 @@ guardrails, not hard security boundaries.
 
 ## Guard limitations
 
-The guard is a seatbelt, not a sandbox. It blocks or asks on common
-destructive patterns (broad deletes, force pushes, infrastructure destruction,
-package publishing, dangerous cloud deletes, protected secret-file writes).
-It can be bypassed by command obfuscation, interpreter wrappers, custom
-scripts, aliases, or destructive behavior hidden inside another tool. Real
-enforcement still depends on agent permissions, OS sandboxing, code review,
-and human judgment.
+The guard is a seatbelt, not a sandbox: it matches patterns against the
+command string, without tokenizing the shell. Treat it as a high-value speed
+bump that catches the common catastrophic mistakes, not as an enforcement
+boundary.
 
-## Verification loop trust gate
+**What it catches** (deny or ask): recursive deletes of root, home, `$HOME`,
+and top-level system directories (`/etc`, `/usr`, `/var`, `/bin`, `/lib`,
+`/boot`, `/root`, `/home`, …) including quoted and `${HOME}` forms; force
+pushes (`--force`, `-f`, and `+refspec`) and mirror pushes; device writes and
+filesystem formats; `git reset --hard` / `clean -f` / branch and tag deletes;
+`DROP`/`TRUNCATE`; cloud/infra/cluster deletes and `terraform`/`pulumi
+destroy`; piping remote scripts to a shell (`curl`/`wget … | sh|bash|zsh|ksh|
+dash|fish`, optionally via `sudo`, and PowerShell `irm|iwr … | iex`); package
+publishing; `gh` destructive API calls; and writes to protected secret files
+(`.env*`, private keys, prod appsettings, `.git/`) via editor tools, shell
+redirection (`>`/`>>`), or `tee`.
 
-The Stop hook executes the configured oracle with the shell. Loop files are
-therefore refused unless BOTH: the file contains `"trusted": true`, AND it is
-not tracked in git. This blocks the cloned-repository attack where a repo
-ships a loop file that auto-runs arbitrary commands. If a loop file is
-refused, delete it and recreate it through `/loop` if it is yours.
+**What it does NOT catch** (by design — it is a blocklist): deep subpaths of
+system dirs (e.g. `rm -rf /var/log/app`, allowed to avoid false positives);
+obfuscation and indirection (`eval`, `$(…)`, base64-decode pipes, variable
+substitution, aliases, `\rm`); interpreter wrappers other than the listed
+shells (`python -c`, `perl -e`, `make`, npm scripts); destructive behavior
+hidden inside another tool; and reads/exfiltration of secrets (e.g.
+`cat .env`). Real enforcement still depends on agent permissions, OS
+sandboxing, code review, and human judgment. You can tighten policy with
+`guardLevel: strict` (asks become denies) and `guardCustomRules` in
+`.agent/kit.json`.
+
+## Repo-local executable state is untrusted when committed
+
+Any `.agent/` file that can influence execution is treated as hostile input
+when it is tracked in git — the cloned-repository attack vector. Consistently
+across the engine, a **git-tracked** file of these kinds is refused, and its
+effect is dropped:
+
+- `.agent/loop.json` — the Stop hook's oracle. Refused unless BOTH
+  `"trusted": true` AND untracked. Delete and recreate via `/loop` if it is
+  yours.
+- `.agent/kit.json` — config including `guardLevel`/`guardCustomRules`. A
+  tracked file is ignored (it cannot relax the guard); `doctor` surfaces why.
+- `.agent/bridge/adapters.json` — vendor CLI specs. A tracked file is refused;
+  only the built-in adapters are used.
+- `.agent/bridge/jobs/*.json` — job records. A tracked record is not loaded, so
+  it cannot redirect a result/log read.
+- The bridge oracle runs only when its job record is untracked AND the oracle
+  itself is guard-`allow` (not merely non-deny).
+
+Bridge result/log reads are additionally **path-confined**: only files that
+resolve inside `.agent/results` / `.agent/logs` are read or written, so a job
+record cannot point a read at, say, `~/.ssh/id_rsa`.
 
 ## Bridge isolation
 
