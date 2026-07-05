@@ -1,65 +1,105 @@
 ---
 name: orchestration
-description: How to decompose work and delegate to subagents (Task tool) and fleets (Workflows) effectively in Claude Code. Use for large multi-part tasks, parallel research, codebase-wide analysis, swarm audits, running independent workstreams, or when the user mentions agents, subagents, parallelization, "do these in parallel", "workflow", "swarm", "in parallel with many agents", or a task clearly bigger than one context window.
+description: Decompose work and delegate to subagents, bridge workers, and fleets effectively. Use for large multi-part tasks, parallel research, codebase-wide analysis, swarm audits, independent workstreams, or when the user mentions agents, subagents, parallelization, workflows, swarms, or in-parallel execution.
 ---
 
 # Orchestration & Subagents
 
-Subagents have their own context window and return only their final report. That's the whole game: **protect the main context, parallelize independent work, and get back summaries instead of raw exploration.**
+Subagents and bridge workers have their own context. The point is to protect the
+main context, parallelize independent work, and get back compact reports instead
+of raw exploration.
 
-## When to delegate vs. do it yourself
+## When to delegate
 
 Delegate when:
-- **Search/analysis that burns context**: "find every place X is used", "understand how auth works in this repo", reading large logs. The subagent reads 50 files; you receive 20 lines.
-- **Independent parallel workstreams**: 3 unrelated bugs, research on 4 libraries, reviewing 5 PR files. Launch in ONE message so they run concurrently.
-- **Isolation is a feature**: a risky experiment, a review that should be unbiased by your implementation context.
+
+- Search or analysis would burn the main context.
+- Workstreams are independent and can run in parallel.
+- Isolation is useful: experiments, second reviews, or blind review passes.
+- A bundled prompt asset already matches the role better than an ad hoc prompt.
 
 Do it yourself when:
-- The task needs the conversation's accumulated context (subagents don't have it and you'd spend more tokens briefing than doing).
-- Steps are sequential and each depends on the last edit.
-- It's small. Spawning an agent for a 2-file change is pure overhead.
 
-## Writing subagent prompts (this is where orchestration fails)
+- The task depends heavily on conversation context.
+- Steps are sequential and depend on the previous edit.
+- The task is small enough that briefing would cost more than doing.
 
-A subagent knows NOTHING about your conversation. Every prompt must be self-contained:
+## Writing worker prompts
 
-1. **Context**: repo path, what the project is, relevant constraints (one short paragraph).
-2. **Task**: precise, bounded, with explicit non-goals ("do NOT modify tests", "analysis only, no edits").
-3. **Verification**: the command that proves success ("run `dotnet test`, include the output").
-4. **Report format**: exactly what to return — "return: list of file:line locations + one-line explanation each, max 30 lines". Unspecified report format = a rambling essay you have to re-read.
+Every delegated prompt must be self-contained:
 
-Rule of thumb: if your subagent prompt is under 5 lines, it will fail or return junk.
+1. Context: repo path, project shape, constraints.
+2. Task: precise scope and explicit non-goals.
+3. Verification: command or evidence proving success.
+4. Report format: exact shape and maximum length.
+
+If the prompt is under five lines, it is probably under-specified.
+
+## Prompt asset routing
+
+Prompt assets are interchangeable role/workflow/reference contracts. Use them
+instead of rewriting specialist prompts from memory.
+
+- Discover assets with `prompt_catalog` or `maaaw://prompts/catalog`.
+- Read exact text with `prompt_read <id>` when the contract matters.
+- For bridge jobs, pass `--prompt-asset <id>` or MCP `promptAssetId`.
+- For handoffs, record `promptAssetId` so the receiving model knows the active
+  contract.
+- Switch assets deliberately between waves. Example: `repo-scout` for recon,
+  `architecture-auditor` for structure, then `test-writer` for regression tests.
+
+If a selected asset conflicts with the explicit task, the explicit task wins and
+the conflict must be reported under Assumptions.
 
 ## Parallelization rules
 
-- Independent tasks → single message, multiple Task calls (they run concurrently).
-- **Never let two agents write to the same files.** Partition by directory/module. Read-only agents can overlap freely.
-- Fan out breadth-first: recon agents in parallel → synthesize → implementation agents in parallel → one verification pass by YOU (the orchestrator verifies; never trust "done" reports blindly — run the build/tests yourself).
-- Cap at ~4–5 concurrent for implementation work; more than that and merge conflicts + your synthesis burden outgrow the speedup. Research fan-out can go wider.
+- Independent tasks: launch in one message so they run concurrently.
+- Never let two writers own the same files. Partition by module/path.
+- Read-only agents may overlap.
+- Fan out breadth-first: recon → synthesize → implementation → verification by
+  the orchestrator.
+- Cap implementation concurrency around 4-5. Research fan-out can go wider.
 
 ## Orchestrator discipline
 
-- You own the plan and the final state. Subagents own subtasks. Keep a running scoreboard: dispatched / returned / verified / integrated.
-- After each wave: verify (build + tests), integrate, THEN dispatch the next wave. No pipelining unverified work.
-- A failed subagent gets ONE retry with an improved prompt (include what went wrong). Second failure → do it yourself or re-plan; don't loop agents on a broken spec.
-- Persist state to files for anything multi-session: a `PLAN.md` with checkboxes beats context memory. Agents can read it; you can resume from it.
+- You own final state. Delegates own subtasks.
+- Track dispatched / returned / verified / integrated.
+- After each wave, verify, integrate, then dispatch the next wave.
+- A failed delegate gets one retry with a sharper prompt. A second failure means
+  re-plan or do it yourself.
+- Persist state for multi-session work in `PLAN.md` or `.agent/handoff/`.
 
 ## Model tiering
 
-The orchestrator's session should run the strongest model available (Opus-class) — it owns partitioning, synthesis, and severity judgment. Worker agents doing breadth (search, mapping, lane audits) should be Sonnet (`model: sonnet` in agent frontmatter — this kit's auditors and scout are). Escalate individual agents to Opus only for judgment-heavy subtasks.
+The orchestrator should use the strongest available model: it owns partitioning,
+synthesis, severity judgment, and final integration. Breadth workers can use
+cheaper/faster models when the task is search, mapping, or lane auditing.
 
-## Beyond ~5 agents: fleets and Workflows
+## Fleets
 
-For fleets (parallel audits, per-module mapping, mass migrations), use Claude Code Workflows where your installed version supports them; otherwise run the identical phase design through parallel Task calls (~5 concurrent, schemas enforced by prompt). Fleet discipline, on top of everything above:
+For more than about five agents, run phases instead of a soup of workers:
 
-- **Phases, not soup**: recon → parallel specialists → synthesis (→ parallel fixes → verification). Never pipeline unverified work.
-- **Schema every agent** — free-text reports from N agents do not compose. Use `references/audit-swarm-spec.md` schemas (they mirror `schemas/finding.schema.json`); keep schemas flat, deep nesting causes validation-retry loops.
-- **Read-only by default; worktrees for writers** — two agents writing one tree is how swarms corrupt repos.
-- **Right-size**: 4–8 specialists beat 40 generalists for audits; 20+ only for embarrassingly parallel work.
-- Workflow scripts must be deterministic — variability goes in prompts, not control flow.
+- Recon.
+- Parallel specialists.
+- Synthesis.
+- Optional parallel fixes.
+- Verification.
 
-`/audit-swarm` is the worked example: read `references/audit-swarm-spec.md` before building similar swarms.
+Schema every agent report. Free-text reports from many agents do not compose.
+For audit swarms, read `references/audit-swarm-spec.md`.
 
-## Custom agents (.claude/agents/)
+## Bundled agents
 
-This kit ships eight (see agents/ folder): `code-reviewer`, `bug-hunter`, `test-writer`, `repo-scout`, and four swarm auditors (`security-auditor`, `architecture-auditor`, `scalability-auditor`, `quality-auditor`). Prefer them over generic Task calls for their specialties — their system prompts encode the discipline, and restricted tools keep them safe (reviewer can't edit).
+This kit ships eight agents:
+
+- `repo-scout`
+- `code-reviewer`
+- `bug-hunter`
+- `test-writer`
+- `security-auditor`
+- `architecture-auditor`
+- `scalability-auditor`
+- `quality-auditor`
+
+Prefer these assets over generic delegation when their specialty matches the
+task. Their prompts encode discipline and tool restrictions.

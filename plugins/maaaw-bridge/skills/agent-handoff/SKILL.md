@@ -1,42 +1,43 @@
 ---
 name: agent-handoff
-description: Hand work off to a different agent CLI (Codex, Gemini, Cursor, opencode) — or receive work from one — with rules, verification commands, and project memory intact. Use when the user says "hand off to codex/gemini", "continue in another agent", wants a second agent's attempt at the current task, or is setting up a repo for multiple coding agents.
+description: Hand work off to a different agent CLI (Codex, Gemini, Cursor, opencode) — or receive work from one — with rules, verification commands, project memory, and selected prompt contract intact. Use when user says "hand off to codex/gemini", "continue in another agent", wants another agent's attempt at the current task, or is setting up a repo for multiple coding agents.
 ---
 
-# Agent handoff — no context left behind
+# Agent Handoff
 
-A handoff fails when the receiving agent re-derives (or contradicts) what the
-sending agent already settled. The engine makes the transfer mechanical:
-rules, verified commands, and relevant memory travel as data.
+Handoff fails when the receiving agent re-derives or contradicts settled state.
+The engine makes transfer mechanical: rules, verified commands, memory, and
+prompt provenance travel as data.
 
-## Sending (Claude → another agent)
+## Sending to another agent
 
-1. **Sync the rules**: `maaaw rules sync` — AGENTS.md / GEMINI.md /
-   `.cursor/rules/` etc. get the current canonical rules, verified commands,
-   promoted memory, and the budgeted digest (rules-sync skill has details).
-2. **Write the handoff**:
-   `maaaw handoff write --goal "<goal>" --status "<state + precise next action>" --decisions "a;b" --next "x;y" --verification "<oracle>" --to <agent>`
-   — the engine attaches the top path-relevant memory record ids and mirrors
-   everything to `.agent/handoff/handoff.json`.
-3. **Launch the other agent** from the repo root; its first instruction is:
-   "read AGENTS.md, then `.agent/handoff/HANDOFF.md`, then verify the claimed
-   state before building on it."
-4. For a *bounded* task while your session stays active, use the agent-bridge
-   skill (`/bridge`) instead of a full handoff.
+1. Sync rules: `maaaw rules sync`.
+2. Select a prompt asset when the receiving agent should adopt a specific role
+   or workflow. Use `prompt_catalog` / `maaaw://prompts/catalog` in MCP.
+3. Write handoff:
+   `maaaw handoff write --goal "<goal>" --status "<state + precise next action>" --decisions "a;b" --next "x;y" --verification "<oracle>" --to <agent>`.
+   MCP callers should pass `promptAssetId` when selected.
+4. Launch the other agent in repo root. First instruction: read `AGENTS.md`,
+   then `.agent/handoff/HANDOFF.md`, then verify claimed state.
 
-## Receiving (any agent → this session)
+For bounded work while this session stays active, use the `agent-bridge` skill
+instead of full handoff.
 
-1. The SessionStart hook already surfaced the handoff if one exists. Read it.
-2. **Verify the claimed state** — run the verification command; do not trust
-   "done" claims from any agent, including past-you.
-3. Honor "Decisions made" — do not re-litigate them silently. If a decision
-   looks wrong, raise it explicitly with the user.
-4. Recall attached memory as needed: `maaaw memory recall "<topic>"`.
+## Receiving from another agent
+
+1. Read `.agent/handoff/HANDOFF.md` and `.agent/handoff/handoff.json`.
+2. Check `promptAssetId` / `promptAssetPath`. If the handoff selected a role or
+   workflow prompt, use that as the active contract unless the user overrides it.
+3. Verify claimed state by running the verification command.
+4. Honor Decisions made. Do not re-litigate silently.
+5. Continue from the precise next action, not from the whole transcript.
 
 ## Rules
-- One handoff file, always current — overwrite, don't append history.
-- Status must contain the *precise* next action (file:line), not "continue".
-- Anything below a page is a summary, not a handoff; anything above two pages
-  is a memoir. Aim for one.
-- Vendor transcript/session transfer is a non-goal — the handoff carries
-  state, not conversation.
+
+- One handoff file, always current. Overwrite; do not append history.
+- Status must contain a precise next action, ideally file:line or exact command.
+- Aim for one page; anything longer is usually a memoir, not a handoff.
+- Vendor transcript/session transfer is a non-goal. Handoff carries state, not
+  conversation.
+- Switch prompt assets deliberately. A handoff with a new `promptAssetId` is an
+  explicit role/workflow change for the next agent.

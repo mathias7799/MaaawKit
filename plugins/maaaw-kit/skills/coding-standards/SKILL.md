@@ -12,6 +12,11 @@ Before writing code, identify the language and read the matching reference file.
 - `references/typescript.md` — TypeScript, React, Next.js
 - `references/python.md` — Python 3.11+, uv, pytest, typing
 
+The .NET/C#, TypeScript, and PowerShell references are anchored to official
+language/vendor guidance and the `dotnet/skills` MCP/Central Package Management
+patterns. Prefer those references over ad hoc memory when a repo has no stronger
+local convention.
+
 ## Universal rules (all languages)
 
 1. **Read before you write.** Never modify a file you haven't viewed. Match the existing style of the repo over these standards when they conflict — consistency beats preference.

@@ -1,42 +1,55 @@
 ---
 name: cross-model-prompting
-description: Write prompts that work when delegating to a DIFFERENT model family (Codex/GPT, Gemini, Copilot, Cursor) via the bridge or a handoff — what transfers, what silently breaks, and how to compensate. Use whenever composing a bridge task, a worker prompt, or AGENTS.md-style guidance another model will consume.
+description: Write prompts that work when delegating to a different model family or agent runtime via bridge/handoff. Use whenever composing bridge tasks, worker prompts, AGENTS.md-style guidance, or instructions another model will consume.
 ---
+# Cross-Model Prompting
 
-# Cross-model prompting — write for the stranger
+Prompts tuned for one model often rely on invisible conventions. When another
+model family or CLI reads the prompt, the usual breakpoints are implicit context,
+tool assumptions, and calibration.
 
-Prompts tuned to one model quietly rely on its conventions. When the reader
-is a different model family, three things break: implicit context, tool
-assumptions, and your calibration of how much rope to give.
+## What Transfers Well
 
-## What transfers 1:1
-- Explicit constraints ("do NOT modify tests", "max 40 lines of report").
-- Verification commands with expected exit codes — every model respects a
-  runnable oracle better than prose quality bars.
-- Structured output contracts (exact section headers, JSON schemas). The
-  bridge's worker-prompt format exists for this reason; keep it.
-- File paths and file:line evidence requirements.
+- Explicit constraints: "do not modify tests", "max 40 lines", "read-only".
+- Verification commands with expected evidence.
+- Structured output contracts: section headers, json schemas, exact report shape.
+- File paths and `file:line` evidence requirements.
+- Selected prompt assets, when passed by id and included with the task.
 
-## What silently breaks
-- **References to YOUR tools**: "use the Task tool", "check your memory" —
-  other CLIs have different or no equivalents. Name outcomes, not tools.
-- **Implicit repo context**: the other model didn't see your session. Restate
-  the one-paragraph context every time (the bridge prompt template does).
-- **Skill/command vocabulary**: /loop, subagents, hooks are this kit's words.
-  Translate to plain instructions ("run <oracle>; if it fails, fix and rerun").
-- **Calibration**: models differ in eagerness. GPT/Codex-family tends to act
-  fast and wide — tighten scope and add explicit non-goals. Gemini-family
-  tends to over-explain — cap report length and demand evidence-first bullets.
-  Never encode these as insults; encode them as constraints for everyone.
+## What Breaks Silently
 
-## Practical rules
-1. Every cross-model prompt is self-contained: context ¶ → bounded task with
-   non-goals → verification → exact output format. No exceptions.
-2. Prefer the engine's primitives — `maaaw bridge run` builds a compliant
-   worker prompt; `maaaw rules sync` gives every model the same ground truth.
-3. One task per delegation. Multi-part asks degrade unpredictably across
-   families; chain jobs instead.
-4. Ask for uncertainty explicitly ("list assumptions under ## Assumptions") —
-   default confidence norms differ wildly between models.
-5. Review output against the contract, not against vibes: missing sections
-   mean the prompt failed, not the model.
+- Tool-specific references: "use Task", "check memory", "run /loop". Name the
+  desired outcome unless the target runtime definitely has that tool.
+- Session-only context. The worker did not see the main conversation; restate the
+  minimum project and task context.
+- Skill vocabulary. Translate kit words into plain instructions when handing off
+  to runtimes that may not know MaaawKit.
+- Calibration differences. Some models act too broadly; tighten scope and
+  non-goals. Some over-explain; cap report length and demand evidence-first
+  bullets.
+
+## Prompt Shape
+
+Every cross-model prompt should contain:
+
+1. Context: repo path, project shape, relevant files, constraints.
+2. Task: precise scope and explicit non-goals.
+3. Prompt asset: selected asset id/path when the worker should follow a bundled
+   contract.
+4. Verification: commands or checks that prove success.
+5. Output: exact report format and maximum length.
+6. Assumptions: tell the worker where to list uncertainty instead of guessing.
+
+If the prompt is under five lines, it is probably under-specified.
+
+## Practical Rules
+
+- Prefer prompt assets over reconstructed specialist prompts when a matching
+  asset exists.
+- Do not encode insults or vibes. Encode constraints, evidence, and acceptance
+  checks.
+- Review the output contract, not the model's tone. Missing required sections
+  mean the prompt failed and should be tightened.
+- For bridge jobs, pass prompt assets with `--prompt-asset <asset-id>` or MCP
+  `promptAssetId`. For handoffs, record `promptAssetId` so the receiver knows the
+  intended contract.

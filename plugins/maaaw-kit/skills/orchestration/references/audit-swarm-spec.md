@@ -1,41 +1,59 @@
 # Audit Swarm Specification
 
-Reference design for the parallel repo audit. Reuse the shape (phases + schemas) for other swarms.
+Reference design for a parallel repo audit. Reuse this shape for other swarms:
+phases first, schemas second, synthesis last.
 
 ## Phases
-1. RECON (1 agent, repo-scout): inventory — stacks, entry points, size, build/test commands, module map. Output feeds every specialist prompt.
-2. SPECIALISTS (4 parallel): security-auditor, architecture-auditor, scalability-auditor, quality-auditor (this plugin ships all four, `model: sonnet`, read-only). Each receives: the recon summary + its lane + the schema below + "evidence file:line for every finding; do not stray into other lanes."
-3. SYNTHESIS (orchestrator, or one opus agent for very large repos): merge findings, dedupe cross-lane overlaps (the same god-file will surface in 3 lanes — one finding, three lenses), re-rank severity globally, write AUDIT.md per the codebase-audit skill's report format.
-4. VERIFY (orchestrator): spot-check the top 3 findings against the actual code before publishing — swarm agents occasionally hallucinate line numbers.
 
-## Per-finding schema (all specialists share it)
+1. RECON: one `repo-scout` maps stacks, entry points, size, build/test commands,
+   and module boundaries. This output feeds every specialist prompt.
+2. SPECIALISTS: run `security-auditor`, `architecture-auditor`,
+   `scalability-auditor`, and `quality-auditor` in parallel. Each receives the
+   recon summary, its lane, and the findings contract. Instruct each specialist:
+   "evidence every finding with file:line; stay in your lane."
+3. SYNTHESIS: orchestrator merges findings, dedupes cross-lane overlaps, ranks
+   severity globally, and writes the final audit using the `codebase-audit`
+   report shape.
+4. VERIFY: orchestrator spot-checks the top findings before publishing. Swarm
+   agents can hallucinate line numbers; verify the high-impact claims.
+
+## Findings Contract
+
+All specialists end with a fenced json block matching
+`schemas/findings-report.schema.json`:
+
 ```json
 {
-  "type": "object",
-  "properties": {
-    "verdict": {"type": "string", "enum": ["red", "orange", "green"]},
-    "verdict_reason": {"type": "string"},
-    "findings": {"type": "array", "items": {"type": "object", "properties": {
-      "severity": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
-      "title": {"type": "string"},
-      "location": {"type": "string", "description": "file:line, or file range"},
-      "evidence": {"type": "string"},
-      "impact": {"type": "string"},
-      "fix": {"type": "string"},
-      "effort": {"type": "string", "enum": ["S", "M", "L"]}
-    }, "required": ["severity", "title", "location", "evidence", "impact", "fix"]}},
-    "clean_checks": {"type": "array", "items": {"type": "string"}},
-    "not_covered": {"type": "array", "items": {"type": "string"}}
-  },
-  "required": ["verdict", "verdict_reason", "findings", "clean_checks", "not_covered"]
+  "agent": "<agent name>",
+  "scope": "<what was examined>",
+  "findings": [
+    {
+      "severity": "critical|high|medium|low|info",
+      "title": "<short title>",
+      "file": "<optional file>",
+      "line": 0,
+      "evidence": "<specific evidence>",
+      "recommendation": "<optional fix direction>",
+      "confidence": "low|medium|high",
+      "lane": "<optional lane>"
+    }
+  ],
+  "notCovered": ["..."]
 }
 ```
 
-## Synthesis rules
-- Cap merged report at ~25 findings; group repeated instances with counts.
-- A finding reported by 2+ lanes gets a severity bump consideration, not duplication.
-- Preserve every lane's `not_covered` list verbatim in the final report — the audit's honesty lives there.
-- Include each lane's verdict line so disagreement between lanes is visible.
+## Synthesis Rules
 
-## Scaling up
-For monorepos: insert phase 1.5 — fan repo-scout out per module (this is where 10–30 agents is justified), then run the 4 specialists per major module or give each specialist the module map to prioritize within their lane.
+- Cap the merged report at about 25 findings.
+- Group repeated instances and carry counts instead of listing every copy.
+- A finding reported by 2+ lanes gets severity-bump consideration, not duplicate
+  entries.
+- Preserve each lane's `notCovered` list verbatim. Audit honesty depends on it.
+- Include each lane's verdict line so disagreements remain visible.
+
+## Scaling Up
+
+For monorepos, insert phase 1.5: fan `repo-scout` out per major module. Then run
+the four specialists per module, giving each the module map and lane-specific
+priority. Use prompt assets for the specialist roles instead of hand-written
+prompts when available.
