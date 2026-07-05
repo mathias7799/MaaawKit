@@ -95,7 +95,18 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
     if (fences % 2 === 1) errors.push(`unbalanced code fences: ${f.rel}`);
   }
 
-  // skill frontmatter: name+description, name matches directory, optional line budget
+  // skill frontmatter: name+description, name matches directory, optional line budget.
+  // Field rules follow the Agent Skills spec (agentskills.io): only the six
+  // known fields; name is lowercase a-z0-9 + single hyphens, <=64 chars.
+  const SPEC_FIELDS = new Set([
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+    "allowed-tools",
+  ]);
+  const NAME_RULE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
   const skillNames = new Set<string>();
   for (const f of skillMd) {
     const text = read(f.abs);
@@ -119,6 +130,27 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
       skillNames.add(name);
       if (name !== basename(dirname(f.abs))) {
         errors.push(`skill name != directory: ${f.rel}`);
+      }
+      if (!NAME_RULE.test(name) || name.length > 64) {
+        errors.push(
+          `skill name violates the Agent Skills spec (lowercase a-z0-9, single hyphens, <=64): ${f.rel}`,
+        );
+      }
+      if (description.length > 1024) {
+        errors.push(
+          `skill description over the spec's 1024-char cap (${description.length}): ${f.rel}`,
+        );
+      }
+      const compat = fm["compatibility"];
+      if (typeof compat === "string" && compat.length > 500) {
+        errors.push(`skill compatibility over the spec's 500-char cap: ${f.rel}`);
+      }
+      for (const key of Object.keys(fm)) {
+        if (!SPEC_FIELDS.has(key)) {
+          errors.push(
+            `unknown skill frontmatter field "${key}" (Agent Skills spec allows: ${[...SPEC_FIELDS].join(", ")}): ${f.rel}`,
+          );
+        }
       }
     }
     if (options.maxSkillLines) {
@@ -167,7 +199,9 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
   for (const f of agentMd) {
     const text = read(f.abs);
     if (!text.includes("findings-report.schema.json") && !text.includes("finding.schema.json")) {
-      errors.push(`agent missing findings contract (schemas/findings-report.schema.json): ${f.rel}`);
+      errors.push(
+        `agent missing findings contract (schemas/findings-report.schema.json): ${f.rel}`,
+      );
     }
   }
 
@@ -188,11 +222,11 @@ export function validateRepo(options: ValidateOptions): ValidateResult {
     }
   }
 
-  // docs count drift: README/marketplace claims must match reality
+  // docs count drift: README/marketplace claims must match reality (all plugins)
   const counts = {
-    skills: skillMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
-    agents: agentMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
-    commands: commandMd.filter((f) => f.rel.startsWith("plugins/maaaw-kit/")).length,
+    skills: skillMd.length,
+    agents: agentMd.length,
+    commands: commandMd.length,
   };
   for (const doc of ["README.md", ".claude-plugin/marketplace.json"]) {
     const f = relFiles.find((x) => x.rel === doc);

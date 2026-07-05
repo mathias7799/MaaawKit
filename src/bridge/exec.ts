@@ -13,8 +13,8 @@ import treeKill from "tree-kill";
 import { resolveConfig } from "../config/index.js";
 import { evaluateCommand } from "../hooks/guard.js";
 import type { AdapterSpec, JobRecord } from "../schemas/index.js";
-import { agentPaths, ensureStateDirs, writeFileAtomic } from "../state/index.js";
-import { getAdapter, substituteArgs } from "./adapters.js";
+import { agentPaths, ensureStateDirs, withLock, writeFileAtomic } from "../state/index.js";
+import { getAdapter, isGitTracked, substituteArgs } from "./adapters.js";
 import { jobPath, loadJob, newJobId, saveJob, updateJob } from "./jobs.js";
 import {
   type BridgeMode,
@@ -264,7 +264,14 @@ async function finalizeJob(cwd: string, job: JobRecord, exitCode: number): Promi
   }
 
   // Oracle verification (runs in the job's cwd — the worktree for write modes).
-  if (job.oracle && exitCode === 0) {
+  // Job records are repo-local state: refuse the shell-executed oracle when the
+  // record file is git-tracked (cloned-repo attack) or the guard denies it.
+  const jobFile = jobPath(cwd, job.id);
+  const oracleTrusted =
+    job.oracle !== undefined &&
+    !isGitTracked(jobFile, cwd) &&
+    evaluateCommand(job.oracle).decision !== "deny";
+  if (job.oracle && exitCode === 0 && oracleTrusted) {
     try {
       const oracle = await execa(job.oracle, {
         shell: true,
@@ -349,20 +356,24 @@ function pidAlive(pid: number): boolean {
 
 /** Reconcile a background job's state (exit file / liveness), then return it. */
 export async function reconcileJob(cwd: string, id: string): Promise<JobRecord | null> {
-  const job = loadJob(cwd, id);
-  if (!job || job.status !== "running") return job;
+  // Serialized per job: concurrent reconciles (status list + result) must not
+  // both consume the exit file and double-finalize (double oracle run).
+  return withLock(`${jobPath(cwd, id)}.reconcile`, async () => {
+    const job = loadJob(cwd, id);
+    if (!job || job.status !== "running") return job;
 
-  const exitFile = exitFilePath(cwd, job);
-  if (existsSync(exitFile)) {
-    const exitCode = Number(readFileSync(exitFile, "utf-8").trim());
-    rmSync(exitFile, { force: true });
-    return finalizeJob(cwd, job, Number.isFinite(exitCode) ? exitCode : 1);
-  }
-  if (job.pid && !pidAlive(job.pid)) {
-    // Crashed without writing an exit code.
-    return finalizeJob(cwd, job, 1);
-  }
-  return job;
+    const exitFile = exitFilePath(cwd, job);
+    if (existsSync(exitFile)) {
+      const exitCode = Number(readFileSync(exitFile, "utf-8").trim());
+      rmSync(exitFile, { force: true });
+      return finalizeJob(cwd, job, Number.isFinite(exitCode) ? exitCode : 1);
+    }
+    if (job.pid && !pidAlive(job.pid)) {
+      // Crashed without writing an exit code.
+      return finalizeJob(cwd, job, 1);
+    }
+    return job;
+  });
 }
 
 /** Cancel a running job: kill the whole process tree, mark cancelled. */

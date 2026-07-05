@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { resolveConfig } from "../config/index.js";
 import { buildDigest } from "../memory/retrieval.js";
 import { agentPaths } from "../state/index.js";
+import { VERSION } from "../version.js";
 
 const SKIP_DIRS = new Set([
   ".git",
@@ -129,6 +130,7 @@ export interface CanonicalRules {
   rulesText: string;
   /** Budgeted memory digest content ("" when no memory). */
   memoryDigest: string;
+  /** Engine version stamp — stable across days so double-run = zero diff. */
   generatedOn: string;
 }
 
@@ -149,6 +151,6 @@ export function buildCanonicalRules(cwd: string): CanonicalRules {
     inferredCommands: commands.inferred,
     rulesText,
     memoryDigest,
-    generatedOn: new Date().toISOString().slice(0, 10),
+    generatedOn: VERSION,
   };
 }

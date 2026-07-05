@@ -1,9 +1,15 @@
 name: ci
 on:
-  push: { branches: [main] }
+  push: { branches: [main, "claude/**"] }
   pull_request:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   engine:
+    env:
+      # Shared runners are slow; scale the shim latency budgets accordingly.
+      MAAAW_LATENCY_FACTOR: ${{ matrix.os == 'ubuntu-latest' && '3' || '8' }}
     strategy:
       fail-fast: false
       matrix:

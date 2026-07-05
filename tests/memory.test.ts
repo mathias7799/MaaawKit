@@ -175,6 +175,15 @@ describe("digest: budget and path-overlap ranking", () => {
     expect(pathOverlap(["src/*.ts"], ["src/deep/a.ts"])).toBe(0);
     expect(pathOverlap([], ["anything"])).toBe(0);
     expect(globToRegExp("a/**/b.ts").test("a/x/y/b.ts")).toBe(true);
+    // '**' must also match ZERO segments (the classic glob contract)
+    expect(globToRegExp("a/**/b.ts").test("a/b.ts")).toBe(true);
+    expect(globToRegExp("**/*.ts").test("root.ts")).toBe(true);
+    expect(globToRegExp("src/**").test("src/x")).toBe(true);
+    // '.' is literal, '?' is one non-separator char, spaces are literal
+    expect(globToRegExp("a.ts").test("axts")).toBe(false);
+    expect(globToRegExp("a?.ts").test("ab.ts")).toBe(true);
+    expect(globToRegExp("a?.ts").test("a/.ts")).toBe(false);
+    expect(globToRegExp("my file*.md").test("my file-1.md")).toBe(true);
   });
 });
 

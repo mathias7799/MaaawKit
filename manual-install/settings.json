@@ -31,7 +31,7 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify.mjs\"",
-            "timeout": 960
+            "timeout": 630
           }
         ]
       }

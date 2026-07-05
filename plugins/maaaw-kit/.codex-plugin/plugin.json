@@ -1,9 +1,0 @@
-{
-  "name": "maaaw-kit",
-  "version": "2.6.0",
-  "description": "MaaawKit production engineering skills, optional lifecycle hooks, and worker-delegation workflows for Codex.",
-  "skills": "./skills/",
-  "license": "MIT",
-  "homepage": "https://maaaw.dk",
-  "repository": "https://github.com/maaaw/maaaw-kit"
-}

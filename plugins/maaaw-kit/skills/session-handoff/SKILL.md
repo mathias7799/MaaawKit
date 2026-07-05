@@ -12,7 +12,7 @@ Context windows end; work doesn't. A handoff is you briefing your amnesiac succe
 - End of a work session with the task unfinished
 - Before risky operations you might want to resume from
 - The moment a loop budget exhausts with failures remaining
-- Before handing off to another agent (the codex-handoff skill builds on this file)
+- Before handing off to another agent (the agent-handoff skill in the maaaw-bridge plugin builds on this file)
 
 ## HANDOFF.md format (write via `maaaw handoff write` → .agent/handoff/; overwrite previous)
 

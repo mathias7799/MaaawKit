@@ -30,7 +30,9 @@ export interface WriteRule {
 
 export const BASH_RULES: readonly BashRule[] = [
   {
-    pattern: String.raw`\brm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+(/|~|\$HOME)(\s|$)`,
+    // Flags: short (-rf, -r -f) or long (--recursive/--force); targets: /, /*,
+    // ~, ~/, $HOME, $HOME/ — with optional trailing slash/glob before the end.
+    pattern: String.raw`\brm\s+((-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\s+)+(/|~|\$HOME)([/*]*)(\s|$)`,
     flags: "",
     message: "Refusing recursive delete of root/home. Target a specific path instead.",
     action: "deny",
