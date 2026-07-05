@@ -26,7 +26,7 @@ try {
 const FALLBACK = {
   "bashRules": [
     {
-      "pattern": "\\brm\\s+(-[a-zA-Z]*[rf][a-zA-Z]*\\s+)+(/|~|\\$HOME)(\\s|$)",
+      "pattern": "\\brm\\s+((-[a-zA-Z]*[rf][a-zA-Z]*|--recursive|--force|--no-preserve-root)\\s+)+(/|~|\\$HOME)([/*]*)(\\s|$)",
       "flags": "",
       "message": "Refusing recursive delete of root/home. Target a specific path instead.",
       "action": "deny",
@@ -220,7 +220,7 @@ if (tool === "Bash" || tool === "PowerShell") {
     if (textish && rule.sql) continue;
     if (new RegExp(rule.pattern, rule.flags).test(cmd)) emit(rule.action, rule.message);
   }
-} else if (tool === "Edit" || tool === "Write" || tool === "MultiEdit") {
+} else if (tool === "Edit" || tool === "Write" || tool === "MultiEdit" || tool === "NotebookEdit") {
   const path = toolInput.file_path || toolInput.path || "";
   for (const rule of FALLBACK.writeRules) {
     if (new RegExp(rule.pattern, rule.flags).test(path)) emit("ask", rule.message);

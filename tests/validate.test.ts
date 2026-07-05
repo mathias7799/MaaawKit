@@ -163,7 +163,11 @@ describe("validate: Phase 6 rules (agent contracts, reference budgets)", () => {
 
   it("caps references/ files at 250 non-empty lines when budgets are on", () => {
     const root = scaffold();
-    write(root, "plugins/maaaw-kit/skills/big/SKILL.md", "---\nname: big\ndescription: d\n---\nx\n");
+    write(
+      root,
+      "plugins/maaaw-kit/skills/big/SKILL.md",
+      "---\nname: big\ndescription: d\n---\nx\n",
+    );
     const longRef = Array.from({ length: 300 }, (_, i) => `line ${i}`).join("\n");
     write(root, "plugins/maaaw-kit/skills/big/references/huge.md", longRef);
     expect(validateRepo({ root }).errors).toEqual([]); // budgets off by default

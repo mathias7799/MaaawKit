@@ -24,7 +24,20 @@ jobs:
       - run: node dist/cli/main.js validate --max-skill-lines 80
       - run: node dist/cli/main.js doctor --hooks
       - run: npm audit --omit=dev
-      - name: Publish with provenance
-        run: npm publish --provenance --access public
+      - name: Assert tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "tag v$TAG != package.json $PKG"; exit 1
+          fi
+      - name: Publish with provenance (prereleases go to a non-latest dist-tag)
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          case "$PKG" in
+            *-*) DIST_TAG="$(echo "$PKG" | sed 's/.*-\([a-z]*\).*/\1/')" ;;
+            *)   DIST_TAG="latest" ;;
+          esac
+          npm publish --provenance --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

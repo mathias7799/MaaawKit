@@ -27,13 +27,13 @@ default**; allow-list client names in `.agent/kit.json`:
 
 ## Registration
 
-The server command is the same everywhere: `npx -y maaaw mcp serve` (or
+The server command is the same everywhere: `npx -y maaawkit mcp serve` (or
 `maaaw mcp serve` when installed globally), run from the repo root.
 
 **Claude Code**
 
 ```bash
-claude mcp add maaaw -- npx -y maaaw mcp serve
+claude mcp add maaaw -- npx -y maaawkit mcp serve
 ```
 
 **Codex CLI** (`~/.codex/config.toml`)
@@ -41,25 +41,25 @@ claude mcp add maaaw -- npx -y maaaw mcp serve
 ```toml
 [mcp_servers.maaaw]
 command = "npx"
-args = ["-y", "maaaw", "mcp", "serve"]
+args = ["-y", "maaawkit", "mcp", "serve"]
 ```
 
 **Cursor** (`.cursor/mcp.json`)
 
 ```json
-{ "mcpServers": { "maaaw": { "command": "npx", "args": ["-y", "maaaw", "mcp", "serve"] } } }
+{ "mcpServers": { "maaaw": { "command": "npx", "args": ["-y", "maaawkit", "mcp", "serve"] } } }
 ```
 
 **Copilot / VS Code** (`.vscode/mcp.json`)
 
 ```json
-{ "servers": { "maaaw": { "command": "npx", "args": ["-y", "maaaw", "mcp", "serve"] } } }
+{ "servers": { "maaaw": { "command": "npx", "args": ["-y", "maaawkit", "mcp", "serve"] } } }
 ```
 
 **Gemini CLI** (`~/.gemini/settings.json`)
 
 ```json
-{ "mcpServers": { "maaaw": { "command": "npx", "args": ["-y", "maaaw", "mcp", "serve"] } } }
+{ "mcpServers": { "maaaw": { "command": "npx", "args": ["-y", "maaawkit", "mcp", "serve"] } } }
 ```
 
 ## The bidirectional demo

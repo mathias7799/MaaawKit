@@ -156,7 +156,8 @@ describe("MCP: bridge tools and the write-mode gate", () => {
     execFileSync("git", ["config", "user.email", "t@t"], { cwd });
     execFileSync("git", ["config", "user.name", "t"], { cwd });
     writeFileSync(join(cwd, "f.txt"), "x");
-    execFileSync("git", ["add", "."], { cwd });
+    // Only f.txt — a git-tracked adapters.json is refused by the trust gate.
+    execFileSync("git", ["add", "f.txt"], { cwd });
     execFileSync("git", ["commit", "-qm", "init"], { cwd });
     writeJsonFile(join(cwd, ".agent", "kit.json"), { mcp: { writeModeClients: ["test-client"] } });
 

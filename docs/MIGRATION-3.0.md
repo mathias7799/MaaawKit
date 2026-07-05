@@ -33,7 +33,7 @@ TypeScript engine (`maaawkit` on npm, `maaaw` CLI) with two content plugins
 
 1. Update the marketplace and install both plugins (`maaaw-kit`, and
    `maaaw-bridge` if you delegate to other agents).
-2. `npm install -g maaawkit` (or rely on `npx maaaw`), then `maaaw init` in
+2. `npm install -g maaawkit` (or rely on `npx -y maaawkit`), then `maaaw init` in
    each repo and run `/kit-setup` — the interview writes `.agent/kit.json`
    (oracle, guard level, dials).
 3. Re-capture the memory entries worth keeping: `maaaw memory add …`.

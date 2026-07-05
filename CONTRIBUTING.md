@@ -1,19 +1,46 @@
-# Contributing
+# Contributing to MaaawKit
 
-## Ground rules
-- Hooks must be pure-stdlib Python 3.10+, cross-platform (CI runs Ubuntu + Windows), and fail open — a hook bug must never break someone's session (`try/except` around stdin parsing, exit 0 on internal errors).
-- Every hook behavior change needs a selftest case in `plugins/maaaw-kit/hooks/selftest.py`. Every guard rule needs both a positive (blocked) and negative (allowed) case — false positives are bugs, not caution.
-- Skills follow the house style: frontmatter `name` matches the directory; `description` is written for the triggering model (concrete trigger phrases, when-to and when-NOT-to); body teaches judgment with rules + anti-patterns, not essays. Keep SKILL.md under ~120 lines; overflow goes to `references/`.
-- Docs claims must be executable: any command written in a README/skill must actually run.
+MaaawKit 3.0 is one TypeScript engine (`src/`, published as `maaawkit`) plus
+two content plugins (`plugins/maaaw-kit`, `plugins/maaaw-bridge`).
 
-## Before opening a PR
+## Setup and checks
+
+```bash
+npm ci
+npm run lint          # biome
+npm run typecheck     # tsc strict
+npm run build         # tsup → dist/ (needed by shim engine-path tests)
+npm test              # vitest (238+ tests)
+node dist/cli/main.js validate --max-skill-lines 80
+node dist/cli/main.js doctor --hooks
 ```
-python tools/validate.py                         # structure, frontmatter, JSON
-python plugins/maaaw-kit/hooks/selftest.py
-```
-Both must pass on your machine; CI re-runs them on Ubuntu and Windows.
 
-## Adding things
-- New skill: `plugins/maaaw-kit/skills/<name>/SKILL.md` (+ optional `references/`). Add a matching command in `commands/` if it benefits from explicit invocation.
-- New guard rule: add to `BASH_RULES` in `hooks/guard.py` with `deny` only for unambiguous destruction; prefer `ask`. Add selftest cases.
-- Version bumps: update both `.claude-plugin/marketplace.json` and `plugins/maaaw-kit/.claude-plugin/plugin.json`, and add a CHANGELOG entry.
+All of the above must pass; CI runs them on 3 OSes × Node 20/22.
+
+## Where things live
+
+- **Guard rules** are data in `src/hooks/guard-rules.ts`. After changing them
+  run `npm run shims` — the zero-dep hook shims embed a generated fallback and
+  a drift test fails if you forget. Add porting-spec cases to `tests/guard.test.ts`.
+- **Schemas** are zod models in `src/schemas/index.ts`; run `npm run schemas`
+  to regenerate the committed `schemas/*.schema.json` (drift-gated in tests).
+- **Skills** follow the Agent Skills spec: `plugins/*/skills/<name>/SKILL.md`,
+  name == directory, WHAT+WHEN description, body ≤80 non-empty lines with
+  procedures in `references/` (≤250 lines each).
+- **Agents** must keep their `disallowedTools`/`maxTurns` posture and end with
+  the findings contract (validated).
+- **Dependencies**: no new runtime dependency without a justification row in
+  the roadmap table; lockfile committed; `npm audit --omit=dev` gates CI.
+
+## Releases
+
+Bump the version in `package.json`, both `plugins/*/.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json`, and `src/version.ts`; add a dated CHANGELOG
+entry; tag `vX.Y.Z`. The release workflow verifies tag==version and publishes
+with npm provenance (prereleases go to a non-latest dist-tag).
+
+## Security
+
+Read SECURITY.md first. Anything that executes repo-local config must respect
+the trust gates (git-tracked loop files / adapters.json are refused). Report
+vulnerabilities privately.

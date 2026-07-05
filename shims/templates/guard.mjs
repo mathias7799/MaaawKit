@@ -52,7 +52,7 @@ if (tool === "Bash" || tool === "PowerShell") {
     if (textish && rule.sql) continue;
     if (new RegExp(rule.pattern, rule.flags).test(cmd)) emit(rule.action, rule.message);
   }
-} else if (tool === "Edit" || tool === "Write" || tool === "MultiEdit") {
+} else if (tool === "Edit" || tool === "Write" || tool === "MultiEdit" || tool === "NotebookEdit") {
   const path = toolInput.file_path || toolInput.path || "";
   for (const rule of FALLBACK.writeRules) {
     if (new RegExp(rule.pattern, rule.flags).test(path)) emit("ask", rule.message);

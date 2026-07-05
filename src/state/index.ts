@@ -114,16 +114,14 @@ export async function withLock<T>(target: string, fn: () => Promise<T> | T): Pro
       writeFileSync(stampFile, String(Date.now()));
       break;
     } catch {
-      // Held by someone else — break stale locks, otherwise wait and retry.
+      // Held by someone else — remove stale locks and re-race the atomic
+      // mkdir (multiple takers can rm, but only one wins the next mkdir).
       try {
         const stamp = Number(readFileSync(stampFile, "utf-8"));
         if (Number.isFinite(stamp) && Date.now() - stamp > LOCK_STALE_MS) {
-          try {
-            writeFileSync(stampFile, String(Date.now()));
-            break; // took over the stale lock
-          } catch {
-            // fall through to retry
-          }
+          const { rmSync } = await import("node:fs");
+          rmSync(lockDir, { recursive: true, force: true });
+          continue; // retry mkdir immediately — atomic winner takes the lock
         }
       } catch {
         // stamp unreadable — racing with creation; retry

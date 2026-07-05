@@ -49,7 +49,7 @@ behavior — config-aware guard levels, memory digest injection, the bridge —
 install the engine:
 
 ```bash
-npm install -g maaawkit   # or: npx maaaw@latest doctor
+npm install -g maaawkit   # or: npx -y maaawkit doctor
 maaaw init                # creates .agent/ state + kit.json in your repo
 maaaw doctor --hooks      # verify everything on this machine
 ```

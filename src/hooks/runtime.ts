@@ -186,7 +186,9 @@ async function checkCsharp(path: string, run: Runner): Promise<string[]> {
 
 async function checkPowershell(path: string, run: Runner): Promise<string[]> {
   const problems: string[] = [];
-  const script = `if (Get-Module -ListAvailable PSScriptAnalyzer) { Invoke-ScriptAnalyzer -Path '${path}' -Severity Warning,Error | ForEach-Object { "$($_.Severity) $($_.RuleName) L$($_.Line): $($_.Message)" } }`;
+  // PowerShell escapes ' inside single-quoted strings by doubling it.
+  const psPath = path.replaceAll("'", "''");
+  const script = `if (Get-Module -ListAvailable PSScriptAnalyzer) { Invoke-ScriptAnalyzer -Path '${psPath}' -Severity Warning,Error | ForEach-Object { "$($_.Severity) $($_.RuleName) L$($_.Line): $($_.Message)" } }`;
   for (const shell of ["pwsh", "powershell"]) {
     const { output, missing } = await run([
       shell,

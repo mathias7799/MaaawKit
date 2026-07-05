@@ -5,9 +5,31 @@
  * "unverified" specs are best-effort and surfaced as such by doctor.
  */
 
+import { spawnSync } from "node:child_process";
+import { relative } from "node:path";
 import { execa } from "execa";
+import { evaluateCommand } from "../hooks/guard.js";
 import { type AdapterSpec, AdapterSpecSchema } from "../schemas/index.js";
 import { agentPaths, readJsonFile } from "../state/index.js";
+
+/**
+ * Trust gate for repo-local executable config — same threat model as the
+ * stop-verify loop file: a file committed into a cloned repo is exactly the
+ * attack vector; locally created ones are untracked.
+ */
+export function isGitTracked(path: string, cwd: string): boolean {
+  try {
+    const rel = relative(cwd, path);
+    const r = spawnSync("git", ["ls-files", "--error-unmatch", "--", rel], {
+      cwd,
+      timeout: 10_000,
+      stdio: "ignore",
+    });
+    return r.status === 0;
+  } catch {
+    return false;
+  }
+}
 
 export const BUILTIN_ADAPTERS: Record<string, AdapterSpec> = {
   codex: AdapterSpecSchema.parse({
@@ -15,11 +37,21 @@ export const BUILTIN_ADAPTERS: Record<string, AdapterSpec> = {
     bin: "codex",
     promptVia: "stdin",
     outputVia: "file",
-    readArgs: ["exec", "--sandbox", "read-only", "-o", "{outputFile}", "-"],
-    writeArgs: ["exec", "--sandbox", "workspace-write", "-o", "{outputFile}", "-"],
+    readArgs: ["exec", "--sandbox", "read-only", "--output-last-message", "{outputFile}", "-"],
+    writeArgs: [
+      "exec",
+      "--sandbox",
+      "workspace-write",
+      "--output-last-message",
+      "{outputFile}",
+      "-",
+    ],
     resumeArgs: ["exec", "resume", "{threadId}", "-"],
-    verifiedAgainst: "codex-cli exec surface, 2.6-era flags",
-    notes: "The only adapter with a real-world smoke test on record (2.6 codex-worker).",
+    verifiedAgainst:
+      "cross-checked vs openai/codex-plugin-cc (sandbox mode names confirmed; that plugin uses the app-server RPC, so exec flags still need a live smoke test)",
+    notes:
+      "Sandbox names read-only/workspace-write confirmed against the reference plugin. " +
+      "The reference integrates via `codex app-server` JSON-RPC (streaming, outputSchema, turn/interrupt) — a future adapter mode.",
   }),
   claude: AdapterSpecSchema.parse({
     id: "claude",
@@ -69,10 +101,24 @@ export const BUILTIN_ADAPTERS: Record<string, AdapterSpec> = {
   }),
 };
 
-/** Built-ins merged with .agent/bridge/adapters.json overrides. */
+/** True when adapter overrides were present but refused (doctor surfaces it). */
+export function adapterOverridesRefused(cwd: string): boolean {
+  const file = agentPaths(cwd).adaptersFile;
+  return readJsonFile(file) !== null && isGitTracked(file, cwd);
+}
+
+/**
+ * Built-ins merged with .agent/bridge/adapters.json overrides. Overrides are
+ * REFUSED when the file is tracked in git (cloned-repo attack vector — the
+ * same gate the loop file gets); create it locally and keep it untracked.
+ */
 export function loadAdapters(cwd: string): Record<string, AdapterSpec> {
   const adapters: Record<string, AdapterSpec> = { ...BUILTIN_ADAPTERS };
-  const overrides = readJsonFile<Record<string, unknown>>(agentPaths(cwd).adaptersFile);
+  const adaptersFile = agentPaths(cwd).adaptersFile;
+  const overrides = readJsonFile<Record<string, unknown>>(adaptersFile);
+  if (overrides && isGitTracked(adaptersFile, cwd)) {
+    return adapters; // refused — builtin specs only
+  }
   if (overrides && typeof overrides === "object") {
     for (const [id, raw] of Object.entries(overrides)) {
       const parsed = AdapterSpecSchema.safeParse({
@@ -105,6 +151,12 @@ export interface AdapterAvailability {
 
 /** Probe one adapter's CLI (used by `maaaw bridge detect` and doctor). */
 export async function detectAdapter(spec: AdapterSpec): Promise<AdapterAvailability> {
+  // Guard-screen the probe argv before executing anything — adapter specs are
+  // config, and config never gets to run deny-level commands.
+  const probe = [spec.bin, ...spec.baseArgs, ...spec.detectArgs].join(" ");
+  if (evaluateCommand(probe).decision === "deny") {
+    return { id: spec.id, bin: spec.bin, available: false, verifiedAgainst: spec.verifiedAgainst };
+  }
   try {
     const result = await execa(spec.bin, [...spec.baseArgs, ...spec.detectArgs], {
       timeout: 10_000,
